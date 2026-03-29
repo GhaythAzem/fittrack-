@@ -589,6 +589,47 @@
             font-weight: 700; display: flex; align-items: center;
             justify-content: center; padding: 0 4px;
         }
+
+        /* Touch-freundlichere Buttons auf Mobile */
+        @media (max-width: 640px) {
+            #sidebar { width: 100% !important; }
+            .nav-item { padding: 14px 16px !important; min-height: 52px; }
+            button { min-height: 44px; }
+            .cf-card { width: 240px !important; }
+            .exercise-card { padding: 12px !important; }
+            .set-row { flex-wrap: wrap; gap: 8px; }
+            .overflow-x-auto {
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .h-56 { height: 180px !important; }
+            .h-64 { height: 200px !important; }
+            #exerciseList .grid {
+                grid-template-columns: 1fr !important;
+            }
+            #cameraModal > div {
+                margin: 16px !important;
+                width: calc(100% - 32px) !important;
+            }
+            #toast {
+                bottom: 80px !important;
+                left: 16px !important;
+                right: 16px !important;
+                width: auto !important;
+            }
+            .p-4 { padding: 12px !important; }
+            .p-6 { padding: 16px !important; }
+            .p-8 { padding: 16px !important; }
+            .tilt-card { transform: none !important; }
+            .tilt-card:hover { transform: none !important; }
+        }
+
+        /* Smooth Scroll überall */
+        * { -webkit-overflow-scrolling: touch; }
+        html { scroll-behavior: smooth; }
+
+        /* Verhindert Text-Zoom auf iOS beim Focus */
+        input, select, textarea { font-size: 16px !important; }
     </style>
 </head>
 <body class="bg-dark text-light min-h-screen font-sans">
@@ -947,6 +988,7 @@
                                 <th class="px-4 py-3 text-muted font-semibold text-xs uppercase tracking-wider">Set</th>
                                 <th class="px-4 py-3 text-muted font-semibold text-xs uppercase tracking-wider">Reps</th>
                                 <th class="px-4 py-3 text-muted font-semibold text-xs uppercase tracking-wider">Weight</th>
+                                <th class="px-4 py-3 text-muted font-semibold text-xs uppercase tracking-wider">Aktion</th>
                             </tr>
                         </thead>
                         <tbody id="detailWorkoutLog">
@@ -2563,14 +2605,21 @@ async function showMemberDetail(id) {
             });
 
             let isFirstRowOfWorkout = true;
-            exList.forEach(ex => {
+            exList.forEach((ex, exIdx) => {
                 const setsData = Array.isArray(ex.sets) ? ex.sets : [{ reps: ex.reps, weight: ex.weight }];
                 setsData.forEach((set, setIdx) => {
                     let photoCell = '';
+                    let deleteCell = '';
                     if (isFirstRowOfWorkout) {
                         photoCell = w.photo
                             ? `<td class="px-3 py-2" rowspan="${totalRows}"><img src="${w.photo}" class="session-photo-thumb" onclick="openLightbox(this.src)" alt="Session"></td>`
                             : `<td class="px-3 py-2 text-muted/30" rowspan="${totalRows}"><svg class="size-6 mx-auto" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" width="24" height="24"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg></td>`;
+                        deleteCell = `<td class="px-4 py-3" rowspan="${totalRows}">
+                            <button onclick="deleteWorkout('${w.id}')" class="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 rounded-lg transition-all text-xs font-bold flex items-center gap-1">
+                                <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                Löschen
+                            </button>
+                        </td>`;
                         isFirstRowOfWorkout = false;
                     }
                     const dateCell = setIdx === 0 ? `<td class="px-4 py-2 text-muted text-xs" rowspan="${setsData.length}">${formatDate(w.date)}</td>` : '';
@@ -2580,6 +2629,7 @@ async function showMemberDetail(id) {
                         <td class="px-4 py-2 text-xs text-muted text-center">Set ${setIdx + 1}</td>
                         <td class="px-4 py-2"><span class="glass-light px-2 py-0.5 rounded-md text-xs font-bold">${set.reps}</span></td>
                         <td class="px-4 py-2 text-primary font-bold text-sm">${set.weight} kg</td>
+                        ${deleteCell}
                     </tr>`);
                 });
             });
@@ -2627,6 +2677,15 @@ async function deleteCurrentMember() {
     await saveData(data);
     showToast('Member deleted');
     navigate('members');
+}
+
+async function deleteWorkout(workoutId) {
+    if (!confirm('Dieses Workout wirklich löschen?')) return;
+    const data = await loadData();
+    data.workouts = data.workouts.filter(w => w.id !== workoutId);
+    await saveData(data);
+    showToast('Workout gelöscht!');
+    showMemberDetail(currentMemberId);
 }
 
 // ==================== WORKOUT LOGGER ====================
