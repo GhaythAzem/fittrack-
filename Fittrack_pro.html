@@ -656,7 +656,7 @@
 <div id="sidebarOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden lg:hidden transition-opacity" onclick="toggleSidebar()"></div>
 
 <!-- Sidebar -->
-<aside id="sidebar" class="fixed top-0 left-0 h-full w-64 border-r border-border z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300">
+<aside id="sidebar" class="fixed top-0 left-0 h-full w-64 border-r border-border z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col overflow-y-auto">
     <div class="p-6 border-b border-border">
         <div class="logo-3d inline-block">
             <h1 class="text-xl font-bold flex items-center gap-3">
@@ -666,7 +666,7 @@
         </div>
         <p class="text-muted text-xs mt-2 tracking-wide">TRAINER DASHBOARD</p>
     </div>
-    <nav class="p-3 space-y-1 mt-2">
+    <nav class="p-3 space-y-1 mt-2 flex-1">
         <button onclick="navigate('dashboard')" data-page="dashboard" class="nav-item active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted hover:text-light transition-all duration-200">
             <svg class="size-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/></svg>
             Dashboard
@@ -680,7 +680,7 @@
             Workout Logger
         </button>
     </nav>
-    <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
+    <div class="p-4 border-t border-border mt-auto shrink-0">
         <div class="flex gap-2 mb-2">
             <button onclick="exportData()" class="flex-1 btn-ripple glass-light hover:bg-white/10 text-muted hover:text-light px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5">
                 <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
@@ -2848,76 +2848,102 @@ async function saveWorkout() {
 
 // ==================== SEED DEMO DATA ====================
 async function seedDemoData() {
-    const data = await loadData();
-    if ((data.members && data.members.length > 0) ||
-        (data.workouts && data.workouts.length > 0) ||
-        (data.weightLogs && data.weightLogs.length > 0) ||
-        (data.notes && Object.keys(data.notes).length > 0)) return;
+    try {
+        // Erst Firebase direkt prüfen
+        const snap = await DOC_REF.get();
+        if (snap.exists) {
+            const data = snap.data();
+            // Auch localStorage backup aktualisieren
+            localStorage.setItem('fittrack_backup', JSON.stringify(data));
+            return; // Daten vorhanden → NICHTS tun
+        }
 
-    const members = [
-        { id: 'demo1', name: 'Alex Johnson', age: 28, gender: 'Male', contact: 'alex@email.com', goal: 'Muscle Gain', startWeight: 75, targetWeight: 82, startDate: '2025-12-01', status: 'Active' },
-        { id: 'demo2', name: 'Sarah Chen', age: 32, gender: 'Female', contact: 'sarah@email.com', goal: 'Weight Loss', startWeight: 78, targetWeight: 65, startDate: '2025-11-15', status: 'Active' },
-        { id: 'demo3', name: 'Marcus Davis', age: 24, gender: 'Male', contact: 'marcus@email.com', goal: 'Endurance', startWeight: 82, targetWeight: 78, startDate: '2026-01-10', status: 'Active' },
-        { id: 'demo4', name: 'Emma Wilson', age: 29, gender: 'Female', contact: 'emma@email.com', goal: 'General Fitness', startWeight: 64, targetWeight: 60, startDate: '2026-02-01', status: 'Active' },
-        { id: 'demo5', name: 'Ryan Park', age: 35, gender: 'Male', contact: 'ryan@email.com', goal: 'Weight Loss', startWeight: 95, targetWeight: 80, startDate: '2025-10-20', status: 'Inactive' },
-    ];
+        // Dann localStorage prüfen
+        const backup = localStorage.getItem('fittrack_backup');
+        if (backup) {
+            const parsed = JSON.parse(backup);
+            if (parsed.members && parsed.members.length > 0) {
+                await DOC_REF.set(parsed); // Backup nach Firebase retten
+                return; // Daten aus Backup → NICHTS tun
+            }
+        }
 
-    const weightLogs = [
-        { memberId: 'demo1', weight: 76.2, date: '2026-01-01' }, { memberId: 'demo1', weight: 77.5, date: '2026-02-01' },
-        { memberId: 'demo1', weight: 78.8, date: '2026-03-01' }, { memberId: 'demo1', weight: 79.5, date: '2026-03-25' },
-        { memberId: 'demo2', weight: 76.5, date: '2025-12-15' }, { memberId: 'demo2', weight: 74.8, date: '2026-01-15' },
-        { memberId: 'demo2', weight: 72.3, date: '2026-02-15' }, { memberId: 'demo2', weight: 70.1, date: '2026-03-15' },
-        { memberId: 'demo3', weight: 81.5, date: '2026-02-10' }, { memberId: 'demo3', weight: 80.8, date: '2026-03-10' },
-        { memberId: 'demo4', weight: 63.2, date: '2026-03-01' },
-        { memberId: 'demo5', weight: 93, date: '2025-11-20' }, { memberId: 'demo5', weight: 90, date: '2025-12-20' },
-    ];
+        // NUR wenn wirklich beides leer ist → Demo laden
+        const members = [
+            { id: 'demo1', name: 'Alex Johnson', age: 28, gender: 'Male', contact: 'alex@email.com', goal: 'Muscle Gain', startWeight: 75, targetWeight: 82, startDate: '2025-12-01', status: 'Active' },
+            { id: 'demo2', name: 'Sarah Chen', age: 32, gender: 'Female', contact: 'sarah@email.com', goal: 'Weight Loss', startWeight: 78, targetWeight: 65, startDate: '2025-11-15', status: 'Active' },
+            { id: 'demo3', name: 'Marcus Davis', age: 24, gender: 'Male', contact: 'marcus@email.com', goal: 'Endurance', startWeight: 82, targetWeight: 78, startDate: '2026-01-10', status: 'Active' },
+            { id: 'demo4', name: 'Emma Wilson', age: 29, gender: 'Female', contact: 'emma@email.com', goal: 'General Fitness', startWeight: 64, targetWeight: 60, startDate: '2026-02-01', status: 'Active' },
+            { id: 'demo5', name: 'Ryan Park', age: 35, gender: 'Male', contact: 'ryan@email.com', goal: 'Weight Loss', startWeight: 95, targetWeight: 80, startDate: '2025-10-20', status: 'Inactive' },
+        ];
 
-    const workouts = [
-        { id: 'w1', memberId: 'demo1', date: '2026-03-27', exercises: [
-            { name: 'Bench Press', sets: [{reps:10,weight:80},{reps:10,weight:80},{reps:8,weight:82.5},{reps:6,weight:85}] },
-            { name: 'Incline Dumbbell Press', sets: [{reps:12,weight:30},{reps:12,weight:30},{reps:10,weight:32}] },
-            { name: 'Cable Flyes', sets: [{reps:15,weight:15},{reps:15,weight:15},{reps:12,weight:17.5}] },
-        ]},
-        { id: 'w2', memberId: 'demo2', date: '2026-03-28', exercises: [
-            { name: 'Treadmill Run', sets: [{reps:1,weight:0}] },
-            { name: 'Leg Press', sets: [{reps:12,weight:100},{reps:12,weight:100},{reps:10,weight:110},{reps:8,weight:120}] },
-            { name: 'Walking Lunges', sets: [{reps:20,weight:10},{reps:20,weight:10},{reps:16,weight:12}] },
-        ]},
-        { id: 'w3', memberId: 'demo3', date: '2026-03-28', exercises: [
-            { name: 'Rowing Machine', sets: [{reps:1,weight:0}] },
-            { name: 'Burpees', sets: [{reps:15,weight:0},{reps:15,weight:0},{reps:12,weight:0},{reps:12,weight:0},{reps:10,weight:0}] },
-            { name: 'Box Jumps', sets: [{reps:12,weight:0},{reps:12,weight:0},{reps:10,weight:0},{reps:10,weight:0}] },
-        ]},
-        { id: 'w4', memberId: 'demo1', date: '2026-03-25', exercises: [
-            { name: 'Squats', sets: [{reps:5,weight:120},{reps:5,weight:120},{reps:5,weight:125},{reps:4,weight:130},{reps:3,weight:135}] },
-            { name: 'Romanian Deadlift', sets: [{reps:8,weight:90},{reps:8,weight:90},{reps:8,weight:95},{reps:6,weight:100}] },
-            { name: 'Leg Curl', sets: [{reps:12,weight:40},{reps:12,weight:40},{reps:10,weight:45}] },
-        ]},
-        { id: 'w5', memberId: 'demo4', date: '2026-03-26', exercises: [
-            { name: 'Kettlebell Swings', sets: [{reps:15,weight:16},{reps:15,weight:16},{reps:15,weight:16},{reps:12,weight:20}] },
-            { name: 'Plank Hold', sets: [{reps:1,weight:0},{reps:1,weight:0},{reps:1,weight:0}] },
-            { name: 'Mountain Climbers', sets: [{reps:20,weight:0},{reps:20,weight:0},{reps:20,weight:0}] },
-        ]},
-    ];
+        const weightLogs = [
+            { memberId: 'demo1', weight: 76.2, date: '2026-01-01' }, { memberId: 'demo1', weight: 77.5, date: '2026-02-01' },
+            { memberId: 'demo1', weight: 78.8, date: '2026-03-01' }, { memberId: 'demo1', weight: 79.5, date: '2026-03-25' },
+            { memberId: 'demo2', weight: 76.5, date: '2025-12-15' }, { memberId: 'demo2', weight: 74.8, date: '2026-01-15' },
+            { memberId: 'demo2', weight: 72.3, date: '2026-02-15' }, { memberId: 'demo2', weight: 70.1, date: '2026-03-15' },
+            { memberId: 'demo3', weight: 81.5, date: '2026-02-10' }, { memberId: 'demo3', weight: 80.8, date: '2026-03-10' },
+            { memberId: 'demo4', weight: 63.2, date: '2026-03-01' },
+            { memberId: 'demo5', weight: 93, date: '2025-11-20' }, { memberId: 'demo5', weight: 90, date: '2025-12-20' },
+        ];
 
-    const notes = {
-        'demo1': 'Progressing well on strength. Increase bench to 85kg next week. Diet compliance is good — hitting protein targets.',
-        'demo2': 'Excellent consistency. Down 8kg in 4 months. Introduce more HIIT next phase. Consider meal prep guidance.',
-        'demo3': 'Great cardiovascular improvements. Heart rate recovery has improved significantly. Push for 5K under 22 minutes.',
-    };
+        const workouts = [
+            { id: 'w1', memberId: 'demo1', date: '2026-03-27', exercises: [
+                { name: 'Bench Press', sets: [{reps:10,weight:80},{reps:10,weight:80},{reps:8,weight:82.5},{reps:6,weight:85}] },
+                { name: 'Incline Dumbbell Press', sets: [{reps:12,weight:30},{reps:12,weight:30},{reps:10,weight:32}] },
+                { name: 'Cable Flyes', sets: [{reps:15,weight:15},{reps:15,weight:15},{reps:12,weight:17.5}] },
+            ]},
+            { id: 'w2', memberId: 'demo2', date: '2026-03-28', exercises: [
+                { name: 'Treadmill Run', sets: [{reps:1,weight:0}] },
+                { name: 'Leg Press', sets: [{reps:12,weight:100},{reps:12,weight:100},{reps:10,weight:110},{reps:8,weight:120}] },
+                { name: 'Walking Lunges', sets: [{reps:20,weight:10},{reps:20,weight:10},{reps:16,weight:12}] },
+            ]},
+            { id: 'w3', memberId: 'demo3', date: '2026-03-28', exercises: [
+                { name: 'Rowing Machine', sets: [{reps:1,weight:0}] },
+                { name: 'Burpees', sets: [{reps:15,weight:0},{reps:15,weight:0},{reps:12,weight:0},{reps:12,weight:0},{reps:10,weight:0}] },
+                { name: 'Box Jumps', sets: [{reps:12,weight:0},{reps:12,weight:0},{reps:10,weight:0},{reps:10,weight:0}] },
+            ]},
+            { id: 'w4', memberId: 'demo1', date: '2026-03-25', exercises: [
+                { name: 'Squats', sets: [{reps:5,weight:120},{reps:5,weight:120},{reps:5,weight:125},{reps:4,weight:130},{reps:3,weight:135}] },
+                { name: 'Romanian Deadlift', sets: [{reps:8,weight:90},{reps:8,weight:90},{reps:8,weight:95},{reps:6,weight:100}] },
+                { name: 'Leg Curl', sets: [{reps:12,weight:40},{reps:12,weight:40},{reps:10,weight:45}] },
+            ]},
+            { id: 'w5', memberId: 'demo4', date: '2026-03-26', exercises: [
+                { name: 'Kettlebell Swings', sets: [{reps:15,weight:16},{reps:15,weight:16},{reps:15,weight:16},{reps:12,weight:20}] },
+                { name: 'Plank Hold', sets: [{reps:1,weight:0},{reps:1,weight:0},{reps:1,weight:0}] },
+                { name: 'Mountain Climbers', sets: [{reps:20,weight:0},{reps:20,weight:0},{reps:20,weight:0}] },
+            ]},
+        ];
 
-    await saveData({ members, workouts, weightLogs, notes });
+        const notes = {
+            'demo1': 'Progressing well on strength. Increase bench to 85kg next week. Diet compliance is good — hitting protein targets.',
+            'demo2': 'Excellent consistency. Down 8kg in 4 months. Introduce more HIIT next phase. Consider meal prep guidance.',
+            'demo3': 'Great cardiovascular improvements. Heart rate recovery has improved significantly. Push for 5K under 22 minutes.',
+        };
+
+        await saveData({ members, workouts, weightLogs, notes });
+    } catch(err) {
+        console.error('seedDemoData Fehler:', err);
+        return; // Bei Fehler → NICHTS überschreiben!
+    }
 }
 
 // ==================== INIT ====================
 (async () => {
-    await seedDemoData();
-    loadNotifications();
-    updateNotifBadge();
-    initBlurText();
-    initRotatingText();
-    await refreshDashboard();
-    document.getElementById('loadingOverlay').style.display = 'none';
+    try {
+        await seedDemoData();
+        loadNotifications();
+        updateNotifBadge();
+        initBlurText();
+        initRotatingText();
+        await refreshDashboard();
+    } catch(err) {
+        console.error('Init Fehler:', err);
+        initBlurText();
+        initRotatingText();
+    } finally {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
 
     // Auto-request notifications after 3s
     setTimeout(() => {
