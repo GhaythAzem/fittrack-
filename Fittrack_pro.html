@@ -1,0 +1,2658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitTrack Pro — Gym Trainer Dashboard</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#F97316">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FitTrack Pro">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        primary: '#F97316',
+                        'primary-light': '#FB923C',
+                        cta: '#22C55E',
+                        'cta-hover': '#16A34A',
+                        surface: 'rgba(31,41,55,0.6)',
+                        'surface-solid': '#1F2937',
+                        'surface-light': '#374151',
+                        'surface-lighter': '#4B5563',
+                        dark: '#0B0F19',
+                        'dark-deep': '#060A13',
+                        light: '#F8FAFC',
+                        muted: '#9CA3AF',
+                        border: 'rgba(55,65,81,0.5)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; overflow-x: hidden; }
+
+        /* 3D Background Canvas */
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(249,115,22,0.3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(249,115,22,0.5); }
+
+        /* Glassmorphism base */
+        .glass {
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .glass-light {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* 3D Tilt Card */
+        .tilt-card {
+            transform-style: preserve-3d;
+            perspective: 1000px;
+            transition: transform 0.15s ease-out, box-shadow 0.3s ease;
+        }
+        .tilt-card:hover {
+            box-shadow: 0 25px 50px -12px rgba(249, 115, 22, 0.15), 0 0 30px rgba(249,115,22,0.05);
+        }
+        .tilt-card .tilt-inner {
+            transform: translateZ(30px);
+            transition: transform 0.15s ease-out;
+        }
+
+        /* Glow effects */
+        .glow-orange { box-shadow: 0 0 30px rgba(249,115,22,0.15), inset 0 0 30px rgba(249,115,22,0.03); }
+        .glow-green { box-shadow: 0 0 30px rgba(34,197,94,0.15), inset 0 0 30px rgba(34,197,94,0.03); }
+        .glow-blue { box-shadow: 0 0 30px rgba(59,130,246,0.15), inset 0 0 30px rgba(59,130,246,0.03); }
+        .glow-purple { box-shadow: 0 0 30px rgba(168,85,247,0.15), inset 0 0 30px rgba(168,85,247,0.03); }
+
+        /* Animated gradient border */
+        .gradient-border {
+            position: relative;
+            overflow: hidden;
+        }
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(249,115,22,0.4), rgba(34,197,94,0.2), rgba(59,130,246,0.3), rgba(168,85,247,0.2));
+            background-size: 300% 300%;
+            animation: borderShift 6s ease infinite;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            -webkit-mask-composite: xor;
+            pointer-events: none;
+        }
+        @keyframes borderShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        /* Floating orbs */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.12;
+            animation: orbFloat 8s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -20px) scale(1.1); }
+            66% { transform: translate(-20px, 15px) scale(0.9); }
+        }
+
+        /* Page transitions */
+        .page { display: none; opacity: 0; transform: translateY(12px) scale(0.99); }
+        .page.active {
+            display: block;
+            animation: pageEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes pageEnter {
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Nav */
+        .nav-item { border-left: 3px solid transparent; position: relative; overflow: hidden; }
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(249,115,22,0.15), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .nav-item:hover::before { opacity: 1; }
+        .nav-item.active {
+            background: rgba(249, 115, 22, 0.1);
+            color: #F97316;
+            border-left: 3px solid #F97316;
+        }
+        .nav-item.active::before { opacity: 1; }
+
+        /* Pulse ring on stat icons */
+        .pulse-ring {
+            position: relative;
+        }
+        .pulse-ring::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: inherit;
+            border: 2px solid currentColor;
+            opacity: 0;
+            animation: pulseRing 2.5s ease-out infinite;
+        }
+        @keyframes pulseRing {
+            0% { transform: scale(0.8); opacity: 0.6; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        /* Progress bar fill animation */
+        .progress-fill {
+            transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Row hover glow */
+        .row-hover { transition: all 0.25s ease; }
+        .row-hover:hover {
+            background: rgba(249,115,22,0.04);
+            box-shadow: inset 3px 0 0 #F97316;
+        }
+
+        /* Animated counter */
+        .counter { display: inline-block; }
+
+        /* Floating badge */
+        .float-badge {
+            animation: floatBadge 3s ease-in-out infinite;
+        }
+        @keyframes floatBadge {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        /* Input glow on focus */
+        input:focus, select:focus, textarea:focus {
+            box-shadow: 0 0 0 3px rgba(249,115,22,0.15), 0 0 20px rgba(249,115,22,0.08);
+        }
+
+        /* Custom date picker */
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+
+        /* Ripple on buttons */
+        .btn-ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-ripple::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0; left: 0;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 10%, transparent 10.01%);
+            transform: scale(10);
+            opacity: 0;
+            transition: transform 0.5s, opacity 0.5s;
+        }
+        .btn-ripple:active::after {
+            transform: scale(0);
+            opacity: 1;
+            transition: 0s;
+        }
+
+        /* Skeleton loading */
+        .skeleton {
+            background: linear-gradient(90deg, rgba(55,65,81,0.3) 25%, rgba(55,65,81,0.5) 50%, rgba(55,65,81,0.3) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Sidebar glass */
+        #sidebar {
+            background: rgba(6, 10, 19, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+
+        /* 3D Logo */
+        .logo-3d {
+            transform-style: preserve-3d;
+            animation: logoSpin 8s ease-in-out infinite;
+        }
+        @keyframes logoSpin {
+            0%, 100% { transform: rotateY(0deg) rotateX(0deg); }
+            25% { transform: rotateY(10deg) rotateX(5deg); }
+            50% { transform: rotateY(0deg) rotateX(0deg); }
+            75% { transform: rotateY(-10deg) rotateX(-5deg); }
+        }
+
+        /* Tooltip */
+        .tooltip-wrap { position: relative; }
+        .tooltip-wrap .tooltip {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%) translateY(4px);
+            background: rgba(15,23,42,0.95);
+            backdrop-filter: blur(10px);
+            color: #F8FAFC;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .tooltip-wrap:hover .tooltip {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Confetti burst (for workout save) */
+        .confetti-piece {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            pointer-events: none;
+            z-index: 9999;
+            animation: confettiFall 1.5s ease-out forwards;
+        }
+        @keyframes confettiFall {
+            0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+            100% { transform: translateY(400px) rotate(720deg) scale(0); opacity: 0; }
+        }
+
+        /* Smooth number transitions */
+        .stat-number {
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* ===== REACT BITS INSPIRED EFFECTS ===== */
+
+        /* GradientText — animated flowing gradient on text */
+        .gradient-text {
+            background: linear-gradient(90deg, #F97316, #FB923C, #22C55E, #3B82F6, #A855F7, #F97316);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientFlow 4s ease infinite;
+        }
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* BlurText — words reveal with blur-to-sharp animation */
+        .blur-text-word {
+            display: inline-block;
+            opacity: 0;
+            filter: blur(12px);
+            transform: translateY(8px);
+            animation: blurReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes blurReveal {
+            to { opacity: 1; filter: blur(0); transform: translateY(0); }
+        }
+
+        /* ShinyText — shimmer sweep across text/badges */
+        .shiny-text {
+            position: relative;
+            overflow: hidden;
+        }
+        .shiny-text::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+            animation: shinySwipe 3s ease-in-out infinite;
+        }
+        @keyframes shinySwipe {
+            0%, 100% { left: -100%; }
+            50% { left: 150%; }
+        }
+
+        /* ClickSpark — particle burst on click */
+        .click-spark {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            animation: sparkBurst 0.6s ease-out forwards;
+        }
+        @keyframes sparkBurst {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--spark-x), var(--spark-y)) scale(0); opacity: 0; }
+        }
+
+        /* Spotlight — cursor glow that follows mouse */
+        .spotlight-area {
+            position: relative;
+            overflow: hidden;
+        }
+        .spotlight-area::before {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(249,115,22,0.08) 0%, transparent 70%);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            left: var(--spotlight-x, -200px);
+            top: var(--spotlight-y, -200px);
+            transition: left 0.15s ease, top 0.15s ease;
+            z-index: 1;
+        }
+
+        /* RotatingText — words fade/slide in and out */
+        .rotating-text-container {
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+            vertical-align: bottom;
+            height: 1.3em;
+            min-width: 160px;
+        }
+        .rotating-text-item {
+            display: block;
+            position: absolute;
+            left: 0;
+            width: 100%;
+            opacity: 0;
+            transform: translateY(100%);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .rotating-text-item.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .rotating-text-item.exit {
+            opacity: 0;
+            transform: translateY(-100%);
+        }
+
+        /* Stagger reveal for grid items */
+        @keyframes staggerIn {
+            0% { opacity: 0; transform: translateY(20px) scale(0.96); filter: blur(4px); }
+            100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+        .stagger-item {
+            animation: staggerIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        /* Magnetic hover effect for buttons */
+        .magnetic-btn {
+            transition: transform 0.2s ease-out;
+        }
+
+        /* Gooey pulse on online indicator */
+        .gooey-pulse {
+            position: relative;
+        }
+        .gooey-pulse::before,
+        .gooey-pulse::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 50%;
+            background: currentColor;
+            opacity: 0.4;
+            animation: gooeyPulse 2s ease-in-out infinite;
+        }
+        .gooey-pulse::after { animation-delay: 1s; }
+        @keyframes gooeyPulse {
+            0%, 100% { transform: scale(1); opacity: 0.4; }
+            50% { transform: scale(2.5); opacity: 0; }
+        }
+
+        /* Decrypted text scramble effect */
+        .decrypt-char {
+            display: inline-block;
+            transition: all 0.1s ease;
+        }
+
+        /* Improved page title entrance */
+        .page-title {
+            overflow: hidden;
+        }
+
+        /* Camera Modal */
+        #cameraModal {
+            display: none; position: fixed; inset: 0; z-index: 9000;
+            background: rgba(6,10,19,0.92); backdrop-filter: blur(16px);
+            align-items: center; justify-content: center;
+        }
+        #cameraModal.open { display: flex; }
+        #cameraVideo { width: 100%; max-width: 500px; border-radius: 16px;
+            border: 2px solid rgba(249,115,22,0.3); background: #000; }
+        #cameraCanvas { display: none; }
+
+        /* Photo */
+        .member-photo-ring { border: 2px solid rgba(249,115,22,0.4);
+            box-shadow: 0 0 20px rgba(249,115,22,0.15); }
+        .photo-preview { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+
+        /* ===== COVERFLOW ===== */
+        .coverflow-wrapper {
+            perspective: 1200px;
+            perspective-origin: 50% 50%;
+        }
+        .coverflow-track {
+            transform-style: preserve-3d;
+        }
+        .cf-card {
+            position: absolute;
+            width: 280px;
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transform-style: preserve-3d;
+            cursor: pointer;
+            user-select: none;
+        }
+        @media (max-width: 640px) {
+            .cf-card { width: 260px; }
+        }
+        .cf-card-inner {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .cf-card.active .cf-card-inner::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -60%;
+            width: 40%;
+            height: 200%;
+            background: linear-gradient(
+                105deg,
+                transparent 40%,
+                rgba(255,255,255,0.08) 50%,
+                transparent 60%
+            );
+            animation: cfShine 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes cfShine {
+            0% { left: -60%; }
+            100% { left: 160%; }
+        }
+        .cf-reflection {
+            position: absolute;
+            bottom: -90px;
+            left: 0;
+            right: 0;
+            height: 80px;
+            transform: scaleY(-1);
+            opacity: 0.18;
+            filter: blur(2px);
+            border-radius: 0 0 20px 20px;
+            overflow: hidden;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+            pointer-events: none;
+        }
+        .cf-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .cf-dot.active {
+            width: 20px;
+            border-radius: 3px;
+            background: #F97316;
+        }
+
+        /* Exercise Card */
+        .exercise-card { transition: all 0.2s ease; }
+
+        /* Exercise Chips */
+        .exercise-chip { cursor: pointer; transition: all 0.2s ease;
+            border: 1px solid rgba(55,65,81,0.5); }
+        .exercise-chip.active { background: rgba(249,115,22,0.15);
+            border-color: rgba(249,115,22,0.5); color: #F97316; }
+        .exercise-chip:hover:not(.active) { border-color: rgba(255,255,255,0.15); }
+
+        /* Session Photo */
+        .session-photo-thumb { width: 52px; height: 52px; object-fit: cover;
+            border-radius: 8px; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); }
+
+        /* Lightbox */
+        #lightbox { display: none; position: fixed; inset: 0; z-index: 9500;
+            background: rgba(0,0,0,0.9); align-items: center; justify-content: center; }
+        #lightbox.open { display: flex; }
+        #lightboxImg { max-width: 90vw; max-height: 90vh;
+            border-radius: 12px; object-fit: contain; }
+    </style>
+</head>
+<body class="bg-dark text-light min-h-screen font-sans">
+
+<!-- Three.js 3D Background -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- Floating ambient orbs -->
+<div class="orb" style="width:400px;height:400px;background:#F97316;top:10%;left:-5%;animation-delay:0s;"></div>
+<div class="orb" style="width:350px;height:350px;background:#22C55E;top:60%;right:-8%;animation-delay:-3s;"></div>
+<div class="orb" style="width:300px;height:300px;background:#3B82F6;bottom:-5%;left:30%;animation-delay:-5s;"></div>
+
+<!-- Mobile Header -->
+<header class="lg:hidden fixed top-0 left-0 right-0 z-50 glass px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="text-muted hover:text-light transition-colors" aria-label="Toggle menu">
+            <svg class="size-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <span class="text-lg font-bold text-primary">FitTrack</span>
+    </div>
+</header>
+
+<!-- Sidebar Overlay -->
+<div id="sidebarOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden lg:hidden transition-opacity" onclick="toggleSidebar()"></div>
+
+<!-- Sidebar -->
+<aside id="sidebar" class="fixed top-0 left-0 h-full w-64 border-r border-border z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300">
+    <div class="p-6 border-b border-border">
+        <div class="logo-3d inline-block">
+            <h1 class="text-xl font-bold flex items-center gap-3">
+                <span class="size-10 bg-gradient-to-br from-primary to-orange-600 rounded-xl flex items-center justify-center text-white text-sm font-black shadow-lg shadow-primary/25">FT</span>
+                <span>FitTrack <span class="gradient-text font-black">Pro</span></span>
+            </h1>
+        </div>
+        <p class="text-muted text-xs mt-2 tracking-wide">TRAINER DASHBOARD</p>
+    </div>
+    <nav class="p-3 space-y-1 mt-2">
+        <button onclick="navigate('dashboard')" data-page="dashboard" class="nav-item active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted hover:text-light transition-all duration-200">
+            <svg class="size-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/></svg>
+            Dashboard
+        </button>
+        <button onclick="navigate('members')" data-page="members" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted hover:text-light transition-all duration-200">
+            <svg class="size-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            Members
+        </button>
+        <button onclick="navigate('workout')" data-page="workout" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted hover:text-light transition-all duration-200">
+            <svg class="size-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Workout Logger
+        </button>
+    </nav>
+    <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
+        <div class="flex gap-2 mb-3">
+            <button onclick="exportData()" class="flex-1 btn-ripple glass-light hover:bg-white/10 text-muted hover:text-light px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5">
+                <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Export
+            </button>
+            <label class="flex-1 btn-ripple glass-light hover:bg-white/10 text-muted hover:text-light px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Import
+                <input type="file" accept=".json" class="hidden" onchange="importData(event)">
+            </label>
+        </div>
+        <div class="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
+            <div class="size-10 rounded-full bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-primary/20">TR</div>
+            <div>
+                <p class="text-sm font-semibold">Trainer</p>
+                <p class="text-xs text-cta flex items-center gap-1">
+                    <span class="size-1.5 rounded-full bg-cta inline-block gooey-pulse text-cta"></span>
+                    <span class="shiny-text px-1">Pro Plan</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<!-- Main Content -->
+<main class="lg:ml-64 pt-14 lg:pt-0 min-h-screen relative z-10">
+
+    <!-- ==================== DASHBOARD ==================== -->
+    <div id="page-dashboard" class="page active">
+        <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+            <div class="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div>
+                    <p class="text-primary text-sm font-semibold tracking-wide uppercase mb-1">Overview</p>
+                    <h2 class="text-3xl font-extrabold page-title" data-blur-text="Dashboard"></h2>
+                    <p class="text-muted text-sm mt-1">
+                        Your gym —
+                        <span class="rotating-text-container text-primary font-semibold">
+                            <span class="rotating-text-item active">at a glance</span>
+                            <span class="rotating-text-item">in real-time</span>
+                            <span class="rotating-text-item">always tracking</span>
+                            <span class="rotating-text-item">your progress</span>
+                        </span>
+                    </p>
+                </div>
+                <div class="text-sm text-muted glass-light px-4 py-2 rounded-xl">
+                    <span id="currentDate"></span>
+                </div>
+            </div>
+
+            <!-- Stats Cards with 3D tilt + Spotlight -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 spotlight-area" onmousemove="handleSpotlight(event,this)" onmouseleave="resetSpotlight(this)">
+                <div class="tilt-card glass gradient-border rounded-2xl p-5 glow-orange cursor-default" onmousemove="handleTilt(event,this)" onmouseleave="resetTilt(this)">
+                    <div class="tilt-inner">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-muted text-xs font-semibold uppercase tracking-wider">Members</span>
+                            <span class="pulse-ring size-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                                <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            </span>
+                        </div>
+                        <p id="stat-total" class="text-4xl font-extrabold stat-number">0</p>
+                        <p class="text-xs text-muted mt-2 flex items-center gap-1">
+                            <span class="text-cta">+</span> Registered
+                        </p>
+                    </div>
+                </div>
+                <div class="tilt-card glass gradient-border rounded-2xl p-5 glow-green cursor-default" onmousemove="handleTilt(event,this)" onmouseleave="resetTilt(this)">
+                    <div class="tilt-inner">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-muted text-xs font-semibold uppercase tracking-wider">Active</span>
+                            <span class="pulse-ring size-9 rounded-xl bg-cta/20 flex items-center justify-center text-cta">
+                                <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            </span>
+                        </div>
+                        <p id="stat-active" class="text-4xl font-extrabold stat-number">0</p>
+                        <p class="text-xs text-muted mt-2">This week</p>
+                    </div>
+                </div>
+                <div class="tilt-card glass gradient-border rounded-2xl p-5 glow-blue cursor-default" onmousemove="handleTilt(event,this)" onmouseleave="resetTilt(this)">
+                    <div class="tilt-inner">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-muted text-xs font-semibold uppercase tracking-wider">Avg Loss</span>
+                            <span class="pulse-ring size-9 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
+                                <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/></svg>
+                            </span>
+                        </div>
+                        <p id="stat-weightloss" class="text-4xl font-extrabold stat-number">0</p>
+                        <p class="text-xs text-muted mt-2">kg average</p>
+                    </div>
+                </div>
+                <div class="tilt-card glass gradient-border rounded-2xl p-5 glow-purple cursor-default" onmousemove="handleTilt(event,this)" onmouseleave="resetTilt(this)">
+                    <div class="tilt-inner">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-muted text-xs font-semibold uppercase tracking-wider">Workouts</span>
+                            <span class="pulse-ring size-9 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400">
+                                <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                            </span>
+                        </div>
+                        <p id="stat-workouts" class="text-4xl font-extrabold stat-number">0</p>
+                        <p class="text-xs text-muted mt-2">Total sessions</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Recent Check-ins -->
+                <div class="lg:col-span-2 glass gradient-border rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-5">
+                        <h3 class="text-lg font-bold">Recent Check-ins</h3>
+                        <span class="text-xs text-cta glass-light px-3 py-1 rounded-full shiny-text flex items-center gap-1.5"><span class="size-1.5 rounded-full bg-cta inline-block gooey-pulse text-cta"></span>Live</span>
+                    </div>
+                    <div id="recent-checkins" class="space-y-2">
+                        <p class="text-muted text-sm">No check-ins yet.</p>
+                    </div>
+                </div>
+
+                <!-- Goal Breakdown Donut -->
+                <div class="glass gradient-border rounded-2xl p-6">
+                    <h3 class="text-lg font-bold mb-5">Goals Breakdown</h3>
+                    <div class="h-48 flex items-center justify-center">
+                        <canvas id="goalChart"></canvas>
+                    </div>
+                    <div id="goalLegend" class="mt-4 space-y-2 text-sm"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MEMBERS LIST ==================== -->
+    <div id="page-members" class="page">
+        <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                    <p class="text-primary text-sm font-semibold tracking-wide uppercase mb-1">Team</p>
+                    <h2 class="text-3xl font-extrabold page-title" data-blur-text="Members"></h2>
+                    <p class="text-muted text-sm mt-1">Manage your gym members</p>
+                </div>
+                <button onclick="clickSpark(event); showMemberForm()" class="btn-ripple magnetic-btn bg-gradient-to-r from-cta to-emerald-600 hover:shadow-lg hover:shadow-cta/25 text-white px-6 py-3 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 shrink-0 hover:scale-[1.03] active:scale-[0.98]" onmousemove="magneticHover(event,this)" onmouseleave="magneticReset(this)">
+                    <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" width="16" height="16"><path d="M12 4v16m8-8H4"/></svg>
+                    Add Member
+                </button>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex flex-col sm:flex-row gap-3 mb-6">
+                <div class="flex-1 relative">
+                    <svg class="size-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    <input type="text" id="memberSearch" oninput="renderMembers()" placeholder="Search members..." class="w-full glass-light rounded-xl pl-11 pr-4 h-11 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none transition-all border border-border">
+                </div>
+                <select id="filterGoal" onchange="renderMembers()" class="glass-light border border-border rounded-xl px-4 h-11 text-sm text-light focus:ring-2 focus:ring-primary/50 outline-none">
+                    <option value="">All Goals</option>
+                    <option value="Weight Loss">Weight Loss</option>
+                    <option value="Muscle Gain">Muscle Gain</option>
+                    <option value="Endurance">Endurance</option>
+                    <option value="General Fitness">General Fitness</option>
+                </select>
+                <select id="filterStatus" onchange="renderMembers()" class="glass-light border border-border rounded-xl px-4 h-11 text-sm text-light focus:ring-2 focus:ring-primary/50 outline-none">
+                    <option value="">All Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+            </div>
+
+            <!-- Coverflow Carousel -->
+            <div class="coverflow-wrapper relative overflow-hidden" style="height: 420px;">
+                <div id="coverflowTrack" class="coverflow-track absolute inset-0 flex items-center justify-center">
+                </div>
+            </div>
+            <!-- Dots -->
+            <div id="coverflowDots" class="flex justify-center gap-2 mt-4"></div>
+            <!-- Nav Buttons (Desktop) -->
+            <div class="hidden sm:flex justify-center gap-3 mt-4">
+                <button onclick="coverflowPrev()" class="btn-ripple glass-light hover:bg-white/10 text-light px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2">
+                    <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path d="M15 19l-7-7 7-7"/></svg>
+                    Back
+                </button>
+                <button onclick="coverflowNext()" class="btn-ripple glass-light hover:bg-white/10 text-light px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2">
+                    Next
+                    <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path d="M9 5l7 7-7 7"/></svg>
+                </button>
+            </div>
+            <div id="noMembersMsg" class="glass rounded-2xl p-12 text-center text-muted text-sm hidden">
+                <svg class="size-12 mx-auto mb-3 text-muted/50" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24" width="48" height="48"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                No members found. Add your first member to get started.
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MEMBER DETAIL ==================== -->
+    <div id="page-member-detail" class="page">
+        <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+            <button onclick="navigate('members')" class="text-muted hover:text-primary text-sm flex items-center gap-1 mb-6 transition-colors group">
+                <svg class="size-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" d="M15 19l-7-7 7-7"/></svg>
+                Back to Members
+            </button>
+
+            <!-- Profile Header -->
+            <div class="glass gradient-border rounded-2xl p-6 mb-6 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+                <div class="flex flex-col sm:flex-row items-start gap-5 relative">
+                    <div id="detail-avatar" class="size-20 rounded-2xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center text-white text-2xl font-black shrink-0 shadow-xl shadow-primary/20 overflow-hidden member-photo-ring"></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                            <h2 id="detail-name" class="text-2xl font-extrabold"></h2>
+                            <span id="detail-status" class="text-xs font-bold px-3 py-1 rounded-full w-fit"></span>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5 text-sm">
+                            <div class="glass-light rounded-xl p-3"><span class="text-muted block text-xs mb-1">Age</span><span id="detail-age" class="font-bold text-lg"></span></div>
+                            <div class="glass-light rounded-xl p-3"><span class="text-muted block text-xs mb-1">Gender</span><span id="detail-gender" class="font-bold text-lg"></span></div>
+                            <div class="glass-light rounded-xl p-3"><span class="text-muted block text-xs mb-1">Contact</span><span id="detail-contact" class="font-semibold text-sm"></span></div>
+                            <div class="glass-light rounded-xl p-3"><span class="text-muted block text-xs mb-1">Goal</span><span id="detail-goal" class="font-bold text-lg text-primary"></span></div>
+                        </div>
+
+                        <!-- Progress bar -->
+                        <div class="mt-5">
+                            <div class="flex justify-between text-xs text-muted mb-2">
+                                <span>Weight Progress</span>
+                                <span id="detail-progress-pct" class="text-primary font-bold">0%</span>
+                            </div>
+                            <div class="h-2 bg-white/5 rounded-full overflow-hidden">
+                                <div id="detail-progress-bar" class="progress-fill h-full bg-gradient-to-r from-primary to-cta rounded-full" style="width:0%"></div>
+                            </div>
+                            <div class="flex justify-between text-xs text-muted mt-1">
+                                <span id="detail-startweight"></span>
+                                <span id="detail-targetweight"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 shrink-0">
+                        <button onclick="editCurrentMember()" class="btn-ripple glass-light hover:bg-white/10 text-light px-5 py-2.5 rounded-xl text-sm font-semibold transition-all">Edit</button>
+                        <button onclick="deleteCurrentMember()" class="btn-ripple bg-red-500/10 hover:bg-red-500/20 text-red-400 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all">Delete</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- Weight Progress Chart -->
+                <div class="glass gradient-border rounded-2xl p-6">
+                    <h3 class="text-lg font-bold mb-4">Weight Trend</h3>
+                    <div class="h-56">
+                        <canvas id="weightChart"></canvas>
+                    </div>
+                    <div class="mt-5 flex flex-col sm:flex-row gap-3">
+                        <input type="number" id="newWeight" step="0.1" placeholder="Weight (kg)" class="glass-light border border-border rounded-xl px-4 h-10 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none w-full sm:w-32">
+                        <input type="date" id="weightDate" class="glass-light border border-border rounded-xl px-4 h-10 text-sm text-light focus:ring-2 focus:ring-primary/50 outline-none w-full sm:w-40">
+                        <button onclick="clickSpark(event); addWeightEntry()" class="btn-ripple magnetic-btn bg-gradient-to-r from-primary to-orange-600 hover:shadow-lg hover:shadow-primary/25 text-white px-5 h-10 rounded-xl text-sm font-bold transition-all shrink-0 hover:scale-[1.03] active:scale-[0.98]" onmousemove="magneticHover(event,this)" onmouseleave="magneticReset(this)">Log Weight</button>
+                    </div>
+                </div>
+
+                <!-- Member Stats Mini Cards -->
+                <div class="space-y-4">
+                    <div class="glass gradient-border rounded-2xl p-5">
+                        <h3 class="text-lg font-bold mb-4">Quick Stats</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="glass-light rounded-xl p-4 text-center">
+                                <p id="detail-total-workouts" class="text-3xl font-extrabold text-primary">0</p>
+                                <p class="text-xs text-muted mt-1">Workouts</p>
+                            </div>
+                            <div class="glass-light rounded-xl p-4 text-center">
+                                <p id="detail-total-exercises" class="text-3xl font-extrabold text-cta">0</p>
+                                <p class="text-xs text-muted mt-1">Exercises</p>
+                            </div>
+                            <div class="glass-light rounded-xl p-4 text-center">
+                                <p id="detail-current-weight" class="text-3xl font-extrabold text-blue-400">--</p>
+                                <p class="text-xs text-muted mt-1">Current (kg)</p>
+                            </div>
+                            <div class="glass-light rounded-xl p-4 text-center">
+                                <p id="detail-weight-change" class="text-3xl font-extrabold">--</p>
+                                <p class="text-xs text-muted mt-1">Change (kg)</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass gradient-border rounded-2xl p-5">
+                        <h3 class="text-sm font-bold mb-3 flex items-center gap-2">
+                            <span class="size-2 bg-cta rounded-full animate-pulse"></span>
+                            Start Date
+                        </h3>
+                        <p id="detail-startdate" class="text-lg font-bold"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workout Log -->
+            <div class="glass gradient-border rounded-2xl p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold">Workout History</h3>
+                    <span id="workoutCount" class="text-xs glass-light px-3 py-1 rounded-full text-muted">0 sessions</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-white/5 text-left">
+                                <th class="px-3 py-3 text-muted font-semibold text-xs uppercase tracking-wider">Photo</th>
+                                <th class="px-4 py-3 text-muted font-semibold text-xs uppercase tracking-wider">Date</th>
+                                <th class="px-4 py-3 text-muted font-semibold text-xs uppercase tracking-wider">Exercise</th>
+                                <th class="px-4 py-3 text-muted font-semibold text-xs uppercase tracking-wider">Set</th>
+                                <th class="px-4 py-3 text-muted font-semibold text-xs uppercase tracking-wider">Reps</th>
+                                <th class="px-4 py-3 text-muted font-semibold text-xs uppercase tracking-wider">Weight</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailWorkoutLog">
+                        </tbody>
+                    </table>
+                </div>
+                <p id="noWorkoutsMsg" class="text-muted text-sm text-center py-6 hidden">No workouts logged yet.</p>
+            </div>
+
+            <!-- Strength Progress -->
+            <div class="glass gradient-border rounded-2xl p-6 mb-6">
+                <h3 class="text-lg font-bold mb-4">Strength Progress</h3>
+                <div id="exerciseChips" class="flex flex-wrap gap-2 mb-4"></div>
+                <div class="h-56">
+                    <canvas id="strengthChart"></canvas>
+                </div>
+                <p id="noStrengthMsg" class="text-muted text-sm text-center py-4 hidden">No exercise data to chart.</p>
+            </div>
+
+            <!-- Trainer Notes -->
+            <div class="glass gradient-border rounded-2xl p-6">
+                <h3 class="text-lg font-bold mb-4">Trainer Notes</h3>
+                <textarea id="trainerNotes" rows="4" placeholder="Add notes about progress, diet, or training plan..." class="w-full glass-light border border-border rounded-xl px-4 py-3 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none resize-y leading-relaxed"></textarea>
+                <button onclick="saveNotes()" class="btn-ripple mt-3 glass-light hover:bg-white/10 text-light px-6 py-2.5 rounded-xl text-sm font-semibold transition-all">Save Notes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== ADD/EDIT MEMBER FORM ==================== -->
+    <div id="page-member-form" class="page">
+        <div class="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto">
+            <button onclick="navigate('members')" class="text-muted hover:text-primary text-sm flex items-center gap-1 mb-6 transition-colors group">
+                <svg class="size-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" d="M15 19l-7-7 7-7"/></svg>
+                Back to Members
+            </button>
+
+            <div class="glass gradient-border rounded-2xl p-6 sm:p-8">
+                <h2 id="formTitle" class="text-2xl font-extrabold mb-2">Add New Member</h2>
+                <p class="text-muted text-sm mb-8">Fill in the details to register a new gym member</p>
+                <form id="memberForm" onsubmit="saveMember(event)" class="space-y-6">
+                    <input type="hidden" id="editMemberId">
+                    <input type="hidden" id="formPhotoData">
+
+                    <!-- Avatar Preview + Photo Buttons -->
+                    <div class="flex items-center gap-5">
+                        <div id="formAvatarPreview" class="size-20 rounded-2xl bg-gradient-to-br from-primary/30 to-orange-600/20 flex items-center justify-center text-primary text-2xl font-black shrink-0 overflow-hidden member-photo-ring">
+                            <span id="formAvatarInitials">?</span>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-semibold text-muted uppercase tracking-wider">Profile Photo</label>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="openCamera('member-form')" class="btn-ripple glass-light hover:bg-white/10 text-light px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5">
+                                    <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg>
+                                    Camera
+                                </button>
+                                <label class="btn-ripple glass-light hover:bg-white/10 text-light px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
+                                    <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    File
+                                    <input type="file" accept="image/*" class="hidden" onchange="loadPhotoFromFile(event, 'member-form')">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-xs font-semibold text-muted mb-2 uppercase tracking-wider">Full Name</label>
+                            <input type="text" id="formName" required oninput="updateFormAvatarPreview()" class="w-full glass-light border border-border rounded-xl px-4 h-11 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none transition-all" placeholder="John Doe">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-muted mb-2 uppercase tracking-wider">Age</label>
+                            <input type="number" id="formAge" required min="10" max="100" class="w-full glass-light border border-border rounded-xl px-4 h-11 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none transition-all" placeholder="25">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-xs font-semibold text-muted mb-2 uppercase tracking-wider">Gender</label>
+                            <select id="formGender" required class="w-full glass-light border border-border rounded-xl px-4 h-11 text-sm text-light focus:ring-2 focus:ring-primary/50 outline-none">
+                                <option value="">Select...</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-muted mb-2 uppercase tracking-wider">Contact</label>
+                            <input type="text" id="formContact" required class="w-full glass-light border border-border rounded-xl px-4 h-11 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none transition-all" placeholder="Phone or email">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-muted mb-2 uppercase tracking-wider">Fitness Goal</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="goalSelector">
+                            <label class="goal-option cursor-pointer">
+                                <input type="radio" name="goal" value="Weight Loss" class="hidden peer">
+                                <div class="peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary border border-border rounded-xl p-3 text-center text-sm font-medium text-muted hover:border-white/20 transition-all">
+                                    <div class="text-2xl mb-1">🔥</div>
+                                    Weight Loss
+                                </div>
+                            </label>
+                            <label class="goal-option cursor-pointer">
+                                <input type="radio" name="goal" value="Muscle Gain" class="hidden peer">
+                                <div class="peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary border border-border rounded-xl p-3 text-center text-sm font-medium text-muted hover:border-white/20 transition-all">
+                                    <div class="text-2xl mb-1">💪</div>
+                                    Muscle Gain
+                                </div>
+                            </label>
+                            <label class="goal-option cursor-pointer">
+                                <input type="radio" name="goal" value="Endurance" class="hidden peer">
+                                <div class="peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary border border-border rounded-xl p-3 text-center text-sm font-medium text-muted hover:border-white/20 transition-all">
+                                    <div class="text-2xl mb-1">🏃</div>
+                                    Endurance
+                                </div>
+                            </label>
+                            <label class="goal-option cursor-pointer">
+                                <input type="radio" name="goal" value="General Fitness" class="hidden peer">
+                                <div class="peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary border border-border rounded-xl p-3 text-center text-sm font-medium text-muted hover:border-white/20 transition-all">
+                                    <div class="text-2xl mb-1">⚡</div>
+                                    General
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-xs font-semibold text-muted mb-2 uppercase tracking-wider">Starting Weight (kg)</label>
+                            <input type="number" id="formStartWeight" required step="0.1" min="20" class="w-full glass-light border border-border rounded-xl px-4 h-11 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none transition-all" placeholder="80">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-muted mb-2 uppercase tracking-wider">Target Weight (kg)</label>
+                            <input type="number" id="formTargetWeight" required step="0.1" min="20" class="w-full glass-light border border-border rounded-xl px-4 h-11 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none transition-all" placeholder="70">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-muted mb-2 uppercase tracking-wider">Start Date</label>
+                        <input type="date" id="formStartDate" required class="w-full glass-light border border-border rounded-xl px-4 h-11 text-sm text-light focus:ring-2 focus:ring-primary/50 outline-none transition-all">
+                    </div>
+
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit" onclick="clickSpark(event)" class="btn-ripple magnetic-btn bg-gradient-to-r from-cta to-emerald-600 hover:shadow-lg hover:shadow-cta/25 text-white px-8 py-3 rounded-xl text-sm font-bold transition-all hover:scale-[1.03] active:scale-[0.98]" onmousemove="magneticHover(event,this)" onmouseleave="magneticReset(this)">Save Member</button>
+                        <button type="button" onclick="navigate('members')" class="btn-ripple glass-light hover:bg-white/10 text-light px-8 py-3 rounded-xl text-sm font-semibold transition-all">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== WORKOUT LOGGER ==================== -->
+    <div id="page-workout" class="page">
+        <div class="p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto">
+            <div class="mb-6">
+                <p class="text-primary text-sm font-semibold tracking-wide uppercase mb-1">Session</p>
+                <h2 class="text-3xl font-extrabold page-title" data-blur-text="Workout Logger"></h2>
+                <p class="text-muted text-sm mt-1">Log a training session for a member</p>
+            </div>
+
+            <div class="glass gradient-border rounded-2xl p-6 sm:p-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
+                    <div>
+                        <label class="block text-xs font-semibold text-muted mb-2 uppercase tracking-wider">Member</label>
+                        <select id="workoutMember" required class="w-full glass-light border border-border rounded-xl px-4 h-11 text-sm text-light focus:ring-2 focus:ring-primary/50 outline-none">
+                            <option value="">Choose member...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-muted mb-2 uppercase tracking-wider">Date</label>
+                        <input type="date" id="workoutDate" class="w-full glass-light border border-border rounded-xl px-4 h-11 text-sm text-light focus:ring-2 focus:ring-primary/50 outline-none">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-bold text-muted uppercase tracking-wider">Exercises</h3>
+                    <span id="exerciseCounter" class="text-xs glass-light px-3 py-1 rounded-full text-muted">0 exercises</span>
+                </div>
+                <div id="exerciseList" class="space-y-3 mb-5">
+                </div>
+
+                <button onclick="addExerciseRow()" class="text-primary hover:text-primary-light text-sm font-bold flex items-center gap-2 transition-colors mb-6 group">
+                    <span class="size-7 rounded-lg bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors">
+                        <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" width="16" height="16"><path d="M12 4v16m8-8H4"/></svg>
+                    </span>
+                    Add Exercise
+                </button>
+
+                <!-- Session Photo -->
+                <div class="glass-light rounded-xl p-4 mb-8">
+                    <input type="hidden" id="sessionPhotoData">
+                    <label class="block text-xs font-semibold text-muted mb-3 uppercase tracking-wider">Session Photo (optional)</label>
+                    <div class="flex items-center gap-3">
+                        <button type="button" onclick="openCamera('session')" class="btn-ripple glass hover:bg-white/10 text-light px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5">
+                            <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg>
+                            Take Photo
+                        </button>
+                        <label class="btn-ripple glass hover:bg-white/10 text-light px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
+                            <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            From Gallery
+                            <input type="file" accept="image/*" class="hidden" onchange="loadPhotoFromFile(event, 'session')">
+                        </label>
+                    </div>
+                    <img id="sessionPhotoImg" class="mt-3 rounded-xl max-h-40 object-cover cursor-pointer hidden" onclick="openLightbox(this.src)" alt="Session photo">
+                </div>
+
+                <button onclick="clickSpark(event); saveWorkout()" class="btn-ripple magnetic-btn bg-gradient-to-r from-cta to-emerald-600 hover:shadow-lg hover:shadow-cta/25 text-white px-8 py-3 rounded-xl text-sm font-bold transition-all hover:scale-[1.03] active:scale-[0.98]" onmousemove="magneticHover(event,this)" onmouseleave="magneticReset(this)">
+                    Save Session
+                </button>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-6 right-6 glass px-6 py-4 rounded-2xl text-sm font-semibold shadow-2xl transform translate-y-20 opacity-0 transition-all duration-500 z-50 flex items-center gap-3">
+    <span id="toast-icon" class="size-8 rounded-full flex items-center justify-center shrink-0"></span>
+    <span id="toast-msg"></span>
+</div>
+
+<!-- Camera Modal -->
+<div id="cameraModal">
+    <div class="flex flex-col items-center gap-4 p-6 max-w-lg w-full mx-4">
+        <h3 class="text-lg font-bold text-light">Take Photo</h3>
+        <div class="relative w-full max-w-[500px]">
+            <video id="cameraVideo" autoplay playsinline></video>
+            <button id="cameraFlipBtn" onclick="flipCamera()" class="absolute top-3 right-3 glass-light hover:bg-white/20 text-light p-2.5 rounded-full transition-all hidden" title="Switch camera">
+                <svg class="size-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
+            </button>
+            <div id="cameraFlipLoading" class="absolute inset-0 flex items-center justify-center bg-black/60 rounded-2xl hidden">
+                <div class="size-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+            </div>
+        </div>
+        <canvas id="cameraCanvas"></canvas>
+        <p id="cameraError" class="text-red-400 text-sm hidden">Camera access denied or not available.</p>
+        <div class="flex gap-3">
+            <button onclick="capturePhoto()" class="btn-ripple bg-gradient-to-r from-primary to-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-[1.03] active:scale-[0.98]">
+                <svg class="size-5 inline mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg>
+                Capture
+            </button>
+            <button onclick="closeCamera()" class="btn-ripple glass-light hover:bg-white/10 text-light px-6 py-2.5 rounded-xl text-sm font-semibold transition-all">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLightbox()">
+    <img id="lightboxImg" onclick="event.stopPropagation()" src="" alt="Full size">
+</div>
+
+<script>
+// ==================== THREE.JS 3D BACKGROUND ====================
+(function init3D() {
+    const canvas = document.getElementById('bg-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 30;
+
+    // Floating geometric shapes
+    const shapes = [];
+    const geometries = [
+        new THREE.IcosahedronGeometry(1, 0),
+        new THREE.OctahedronGeometry(1, 0),
+        new THREE.TetrahedronGeometry(1, 0),
+        new THREE.TorusGeometry(0.7, 0.3, 8, 16),
+        new THREE.BoxGeometry(1, 1, 1),
+    ];
+    const colors = [0xF97316, 0x22C55E, 0x3B82F6, 0xA855F7, 0xF97316];
+
+    for (let i = 0; i < 30; i++) {
+        const geo = geometries[i % geometries.length];
+        const mat = new THREE.MeshPhongMaterial({
+            color: colors[i % colors.length],
+            transparent: true,
+            opacity: 0.08,
+            wireframe: Math.random() > 0.5,
+            shininess: 80,
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(
+            (Math.random() - 0.5) * 60,
+            (Math.random() - 0.5) * 40,
+            (Math.random() - 0.5) * 30 - 10
+        );
+        const s = Math.random() * 1.5 + 0.5;
+        mesh.scale.set(s, s, s);
+        mesh.userData = {
+            rotSpeed: { x: (Math.random() - 0.5) * 0.02, y: (Math.random() - 0.5) * 0.02, z: (Math.random() - 0.5) * 0.01 },
+            floatSpeed: Math.random() * 0.5 + 0.2,
+            floatOffset: Math.random() * Math.PI * 2,
+            originY: mesh.position.y,
+        };
+        scene.add(mesh);
+        shapes.push(mesh);
+    }
+
+    // Particle system
+    const particleGeo = new THREE.BufferGeometry();
+    const particleCount = 200;
+    const positions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount * 3; i++) {
+        positions[i] = (Math.random() - 0.5) * 80;
+    }
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const particleMat = new THREE.PointsMaterial({ color: 0xF97316, size: 0.08, transparent: true, opacity: 0.4 });
+    const particles = new THREE.Points(particleGeo, particleMat);
+    scene.add(particles);
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0x404040, 0.5);
+    scene.add(ambient);
+    const pointLight = new THREE.PointLight(0xF97316, 1, 100);
+    pointLight.position.set(10, 10, 20);
+    scene.add(pointLight);
+    const pointLight2 = new THREE.PointLight(0x22C55E, 0.5, 100);
+    pointLight2.position.set(-15, -10, 15);
+    scene.add(pointLight2);
+
+    let mouse = { x: 0, y: 0 };
+    document.addEventListener('mousemove', e => {
+        mouse.x = (e.clientX / window.innerWidth - 0.5) * 2;
+        mouse.y = (e.clientY / window.innerHeight - 0.5) * 2;
+    });
+
+    function animate() {
+        requestAnimationFrame(animate);
+        const t = Date.now() * 0.001;
+
+        shapes.forEach(mesh => {
+            mesh.rotation.x += mesh.userData.rotSpeed.x;
+            mesh.rotation.y += mesh.userData.rotSpeed.y;
+            mesh.rotation.z += mesh.userData.rotSpeed.z;
+            mesh.position.y = mesh.userData.originY + Math.sin(t * mesh.userData.floatSpeed + mesh.userData.floatOffset) * 2;
+        });
+
+        particles.rotation.y += 0.0003;
+        particles.rotation.x += 0.0001;
+
+        camera.position.x += (mouse.x * 8 - camera.position.x) * 0.08;
+        camera.position.y += (-mouse.y * 5 - camera.position.y) * 0.08;
+        camera.lookAt(scene.position);
+
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+})();
+
+// ==================== REACT BITS INSPIRED EFFECTS ====================
+
+// BlurText — animate words in with blur reveal
+function initBlurText() {
+    document.querySelectorAll('[data-blur-text]').forEach(el => {
+        const text = el.getAttribute('data-blur-text');
+        const words = text.split(' ');
+        el.innerHTML = words.map((word, i) =>
+            `<span class="blur-text-word" style="animation-delay:${i * 0.1}s">${word}</span>`
+        ).join(' ');
+    });
+}
+
+// Spotlight — cursor glow follow
+function handleSpotlight(e, el) {
+    const rect = el.getBoundingClientRect();
+    el.style.setProperty('--spotlight-x', (e.clientX - rect.left) + 'px');
+    el.style.setProperty('--spotlight-y', (e.clientY - rect.top) + 'px');
+}
+function resetSpotlight(el) {
+    el.style.setProperty('--spotlight-x', '-200px');
+    el.style.setProperty('--spotlight-y', '-200px');
+}
+
+// ClickSpark — particle burst on click
+function clickSpark(e) {
+    const colors = ['#F97316', '#22C55E', '#3B82F6', '#A855F7', '#FBBF24', '#EC4899'];
+    for (let i = 0; i < 12; i++) {
+        const spark = document.createElement('div');
+        spark.className = 'click-spark';
+        const angle = (Math.PI * 2 / 12) * i + (Math.random() - 0.5) * 0.5;
+        const distance = 30 + Math.random() * 40;
+        spark.style.setProperty('--spark-x', Math.cos(angle) * distance + 'px');
+        spark.style.setProperty('--spark-y', Math.sin(angle) * distance + 'px');
+        spark.style.left = e.clientX - 3 + 'px';
+        spark.style.top = e.clientY - 3 + 'px';
+        spark.style.background = colors[Math.floor(Math.random() * colors.length)];
+        spark.style.boxShadow = `0 0 6px ${spark.style.background}`;
+        document.body.appendChild(spark);
+        setTimeout(() => spark.remove(), 600);
+    }
+}
+
+// RotatingText — cycle through words
+function initRotatingText() {
+    document.querySelectorAll('.rotating-text-container').forEach(container => {
+        const items = container.querySelectorAll('.rotating-text-item');
+        if (items.length < 2) return;
+        let current = 0;
+        setInterval(() => {
+            items[current].classList.remove('active');
+            items[current].classList.add('exit');
+            setTimeout(() => items[current === 0 ? items.length - 1 : current - 1].classList.remove('exit'), 500);
+            current = (current + 1) % items.length;
+            items[current].classList.add('active');
+        }, 2500);
+    });
+}
+
+// Magnetic hover — button follows cursor slightly
+function magneticHover(e, el) {
+    const rect = el.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    el.style.transform = `translate(${x * 0.15}px, ${y * 0.15}px) scale(1.03)`;
+}
+function magneticReset(el) {
+    el.style.transform = 'translate(0, 0) scale(1)';
+}
+
+// Stagger reveal for dynamically rendered grids
+function staggerReveal(container) {
+    const items = container.children;
+    Array.from(items).forEach((item, i) => {
+        item.classList.add('stagger-item');
+        item.style.animationDelay = `${i * 0.07}s`;
+    });
+}
+
+// DecryptedText — scramble reveal effect for text
+function decryptText(el, finalText, duration = 800) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
+    const startTime = performance.now();
+    const len = finalText.length;
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const revealed = Math.floor(progress * len);
+
+        let result = '';
+        for (let i = 0; i < len; i++) {
+            if (finalText[i] === ' ') { result += ' '; continue; }
+            if (i < revealed) { result += finalText[i]; }
+            else { result += chars[Math.floor(Math.random() * chars.length)]; }
+        }
+        el.textContent = result;
+        if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+}
+
+// ==================== CAMERA / PHOTO ====================
+let cameraStream = null;
+let cameraTarget = null;
+let cameraFacing = 'environment';
+let hasMultipleCameras = false;
+
+async function checkMultipleCameras() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        hasMultipleCameras = videoDevices.length > 1;
+    } catch { hasMultipleCameras = false; }
+}
+
+async function startCameraStream() {
+    const video = document.getElementById('cameraVideo');
+    const errorEl = document.getElementById('cameraError');
+    errorEl.classList.add('hidden');
+
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+    }
+
+    try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacing } });
+        video.srcObject = cameraStream;
+    } catch {
+        errorEl.classList.remove('hidden');
+    }
+}
+
+async function openCamera(target) {
+    cameraTarget = target;
+    cameraFacing = 'environment';
+    document.getElementById('cameraModal').classList.add('open');
+
+    await checkMultipleCameras();
+    const flipBtn = document.getElementById('cameraFlipBtn');
+    if (hasMultipleCameras) flipBtn.classList.remove('hidden');
+    else flipBtn.classList.add('hidden');
+
+    await startCameraStream();
+}
+
+async function flipCamera() {
+    const loadingEl = document.getElementById('cameraFlipLoading');
+    loadingEl.classList.remove('hidden');
+
+    cameraFacing = cameraFacing === 'environment' ? 'user' : 'environment';
+    await startCameraStream();
+
+    loadingEl.classList.add('hidden');
+}
+
+function capturePhoto() {
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.getElementById('cameraCanvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const base64 = canvas.toDataURL('image/jpeg', 0.7);
+    setPhotoToTarget(base64, cameraTarget);
+    closeCamera();
+}
+
+function closeCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+    }
+    document.getElementById('cameraVideo').srcObject = null;
+    document.getElementById('cameraModal').classList.remove('open');
+    document.getElementById('cameraFlipLoading').classList.add('hidden');
+}
+
+function loadPhotoFromFile(event, target) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        setPhotoToTarget(e.target.result, target);
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+}
+
+function setPhotoToTarget(base64, target) {
+    if (target === 'member-form') {
+        document.getElementById('formPhotoData').value = base64;
+        const preview = document.getElementById('formAvatarPreview');
+        preview.innerHTML = `<img src="${base64}" class="photo-preview" alt="Avatar">`;
+    } else if (target === 'session') {
+        document.getElementById('sessionPhotoData').value = base64;
+        const img = document.getElementById('sessionPhotoImg');
+        img.src = base64;
+        img.classList.remove('hidden');
+    }
+}
+
+function updateFormAvatarPreview() {
+    const photoData = document.getElementById('formPhotoData').value;
+    if (photoData) return;
+    const name = document.getElementById('formName').value.trim();
+    const initials = name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '?';
+    document.getElementById('formAvatarInitials').textContent = initials;
+}
+
+// ==================== LIGHTBOX ====================
+function openLightbox(src) {
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+}
+
+// ==================== EXPORT / IMPORT ====================
+async function exportData() {
+    const data = await loadData();
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fittrack-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Data exported!');
+}
+
+function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (!data.members || !Array.isArray(data.members)) {
+                return showToast('Invalid backup file', 'error');
+            }
+            await saveData(data);
+            await refreshDashboard();
+            showToast('Daten importiert!');
+        } catch {
+            showToast('Error reading file', 'error');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+// ==================== STRENGTH PROGRESS CHART ====================
+let strengthChartInstance = null;
+
+async function buildExerciseChips(memberId) {
+    const data = await loadData();
+    const workouts = (data.workouts || []).filter(w => w.memberId === memberId);
+    const exerciseNames = new Set();
+    workouts.forEach(w => (w.exercises || []).forEach(ex => {
+        const hasWeight = Array.isArray(ex.sets)
+            ? ex.sets.some(s => s.weight > 0)
+            : (ex.weight > 0);
+        if (hasWeight) exerciseNames.add(ex.name);
+    }));
+
+    const container = document.getElementById('exerciseChips');
+    const noMsg = document.getElementById('noStrengthMsg');
+    const chartCanvas = document.getElementById('strengthChart');
+
+    if (exerciseNames.size === 0) {
+        container.innerHTML = '';
+        noMsg.classList.remove('hidden');
+        chartCanvas.style.display = 'none';
+        if (strengthChartInstance) { strengthChartInstance.destroy(); strengthChartInstance = null; }
+        return;
+    }
+
+    noMsg.classList.add('hidden');
+    chartCanvas.style.display = 'block';
+
+    const names = Array.from(exerciseNames);
+    container.innerHTML = names.map((name, i) =>
+        `<button class="exercise-chip px-3 py-1.5 rounded-lg text-xs font-semibold ${i === 0 ? 'active' : ''}" onclick="selectExerciseChip(this, '${memberId}', '${name.replace(/'/g, "\\'")}')">${name}</button>`
+    ).join('');
+
+    renderStrengthChart(memberId, names[0]);
+}
+
+function selectExerciseChip(btn, memberId, exerciseName) {
+    btn.parentElement.querySelectorAll('.exercise-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    renderStrengthChart(memberId, exerciseName);
+}
+
+async function renderStrengthChart(memberId, exerciseName) {
+    const data = await loadData();
+    const workouts = (data.workouts || []).filter(w => w.memberId === memberId)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const points = [];
+    workouts.forEach(w => {
+        const ex = (w.exercises || []).find(e => e.name === exerciseName);
+        if (!ex) return;
+        // Support both formats
+        const maxWeight = Array.isArray(ex.sets)
+            ? Math.max(...ex.sets.map(s => s.weight))
+            : ex.weight;
+        const totalReps = Array.isArray(ex.sets)
+            ? ex.sets.reduce((sum, s) => sum + s.reps, 0)
+            : ex.reps * (typeof ex.sets === 'number' ? ex.sets : 1);
+        points.push({ date: w.date, weight: maxWeight, volume: totalReps });
+    });
+
+    if (strengthChartInstance) strengthChartInstance.destroy();
+
+    const ctx = document.getElementById('strengthChart').getContext('2d');
+    const gradientOrange = ctx.createLinearGradient(0, 0, 0, 220);
+    gradientOrange.addColorStop(0, 'rgba(249, 115, 22, 0.2)');
+    gradientOrange.addColorStop(1, 'rgba(249, 115, 22, 0)');
+
+    strengthChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: points.map(p => formatDate(p.date)),
+            datasets: [{
+                label: 'Weight (kg)',
+                data: points.map(p => p.weight),
+                borderColor: '#F97316',
+                backgroundColor: gradientOrange,
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#F97316',
+                pointBorderColor: '#0B0F19',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 8,
+                yAxisID: 'y',
+            }, {
+                label: 'Total Reps',
+                data: points.map(p => p.volume),
+                borderColor: '#22C55E',
+                borderWidth: 2,
+                tension: 0.4,
+                pointBackgroundColor: '#22C55E',
+                pointBorderColor: '#0B0F19',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 7,
+                fill: false,
+                yAxisID: 'y1',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: { labels: { color: '#9CA3AF', font: { size: 11, family: 'Inter' }, usePointStyle: true, pointStyle: 'circle' } },
+                tooltip: {
+                    backgroundColor: 'rgba(15,23,42,0.9)',
+                    titleColor: '#F8FAFC',
+                    bodyColor: '#9CA3AF',
+                    borderColor: 'rgba(249,115,22,0.3)',
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    padding: 12,
+                }
+            },
+            scales: {
+                x: { ticks: { color: '#6B7280', font: { size: 10, family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.03)' }, border: { color: 'rgba(255,255,255,0.05)' } },
+                y: {
+                    type: 'linear', position: 'left',
+                    title: { display: true, text: 'kg', color: '#F97316', font: { size: 11 } },
+                    ticks: { color: '#6B7280', font: { size: 10, family: 'Inter' } },
+                    grid: { color: 'rgba(255,255,255,0.03)' },
+                    border: { color: 'rgba(255,255,255,0.05)' },
+                },
+                y1: {
+                    type: 'linear', position: 'right',
+                    title: { display: true, text: 'Volume', color: '#22C55E', font: { size: 11 } },
+                    ticks: { color: '#6B7280', font: { size: 10, family: 'Inter' } },
+                    grid: { drawOnChartArea: false },
+                    border: { color: 'rgba(255,255,255,0.05)' },
+                },
+            },
+            animation: { duration: 1200, easing: 'easeOutQuart' }
+        }
+    });
+}
+
+// ==================== DATA LAYER (FIREBASE FIRESTORE) ====================
+const firebaseConfig = {
+    apiKey: "AIzaSyB0s8zJREJTqIr4WOf1tMs8N6mcgyGbmbE",
+    authDomain: "fittrackpro-10f58.firebaseapp.com",
+    projectId: "fittrackpro-10f58",
+    storageBucket: "fittrackpro-10f58.firebasestorage.app",
+    messagingSenderId: "676871954500",
+    appId: "1:676871954500:web:44e5b6c8d4100d899bdc11",
+    measurementId: "G-8FSRRWZ52V"
+};
+
+const fbApp = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const DOC_REF = db.collection("fittrack").doc("data");
+
+async function loadData() {
+    try {
+        const snap = await DOC_REF.get();
+        if (snap.exists) return snap.data();
+    } catch (e) { console.error('loadData error:', e); }
+    return { members: [], workouts: [], weightLogs: [], notes: {} };
+}
+
+async function saveData(data) {
+    try {
+        await DOC_REF.set(data);
+    } catch (e) { console.error('saveData error:', e); }
+}
+
+function genId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// ==================== 3D TILT EFFECT ====================
+function handleTilt(e, el) {
+    const rect = el.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -8;
+    const rotateY = ((x - centerX) / centerX) * 8;
+    el.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02,1.02,1.02)`;
+}
+
+function resetTilt(el) {
+    el.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
+}
+
+// ==================== ANIMATED COUNTER ====================
+function animateCounter(el, target, suffix = '') {
+    const start = parseFloat(el.textContent) || 0;
+    const duration = 800;
+    const startTime = performance.now();
+    const isFloat = String(target).includes('.') || suffix.includes('kg');
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = start + (target - start) * eased;
+        el.textContent = isFloat ? current.toFixed(1) + suffix : Math.round(current) + suffix;
+        if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+}
+
+// ==================== CONFETTI ====================
+function burstConfetti() {
+    const colors = ['#F97316', '#22C55E', '#3B82F6', '#A855F7', '#FBBF24', '#EC4899'];
+    for (let i = 0; i < 40; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.left = (window.innerWidth / 2 + (Math.random() - 0.5) * 300) + 'px';
+        piece.style.top = (window.innerHeight / 2 + (Math.random() - 0.5) * 100) + 'px';
+        piece.style.animationDuration = (1 + Math.random()) + 's';
+        piece.style.animationDelay = (Math.random() * 0.3) + 's';
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 2000);
+    }
+}
+
+// ==================== NAVIGATION ====================
+let currentMemberId = null;
+let weightChartInstance = null;
+let goalChartInstance = null;
+
+function navigate(page, memberId) {
+    document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+    const target = document.getElementById('page-' + page);
+    if (target) { target.style.display = 'block'; void target.offsetWidth; target.classList.add('active'); }
+
+    const navBtn = document.querySelector(`[data-page="${page}"]`);
+    if (navBtn) navBtn.classList.add('active');
+
+    closeSidebar();
+
+    // Re-trigger blur text animation for the new page
+    const pageEl = document.getElementById('page-' + page);
+    if (pageEl) {
+        pageEl.querySelectorAll('[data-blur-text]').forEach(el => {
+            const text = el.getAttribute('data-blur-text');
+            const words = text.split(' ');
+            el.innerHTML = words.map((word, i) =>
+                `<span class="blur-text-word" style="animation-delay:${i * 0.1}s">${word}</span>`
+            ).join(' ');
+        });
+    }
+
+    if (page === 'dashboard') refreshDashboard();
+    if (page === 'members') { cfIndex = 0; renderMembers(); }
+    if (page === 'member-detail' && memberId) showMemberDetail(memberId);
+    if (page === 'workout') initWorkoutPage();
+}
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.toggle('-translate-x-full');
+    overlay.classList.toggle('hidden');
+}
+
+function closeSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (!sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+    }
+}
+
+function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    const icon = document.getElementById('toast-icon');
+    const msgEl = document.getElementById('toast-msg');
+
+    msgEl.textContent = msg;
+    if (type === 'error') {
+        icon.className = 'size-8 rounded-full flex items-center justify-center shrink-0 bg-red-500/20 text-red-400';
+        icon.innerHTML = '<svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>';
+    } else {
+        icon.className = 'size-8 rounded-full flex items-center justify-center shrink-0 bg-cta/20 text-cta';
+        icon.innerHTML = '<svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>';
+    }
+
+    t.style.transform = 'translateY(0)';
+    t.style.opacity = '1';
+    setTimeout(() => {
+        t.style.transform = 'translateY(20px)';
+        t.style.opacity = '0';
+    }, 3000);
+}
+
+function formatDate(dateStr) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ==================== DASHBOARD ====================
+async function refreshDashboard() {
+    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+    const data = await loadData();
+    const members = data.members;
+    const workouts = data.workouts;
+
+    // Animate stat counters
+    animateCounter(document.getElementById('stat-total'), members.length);
+
+    const oneWeekAgo = new Date(); oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const activeIds = new Set();
+    workouts.forEach(w => { if (new Date(w.date) >= oneWeekAgo) activeIds.add(w.memberId); });
+    animateCounter(document.getElementById('stat-active'), activeIds.size);
+
+    let totalLoss = 0, lossCount = 0;
+    members.forEach(m => {
+        const logs = (data.weightLogs || []).filter(l => l.memberId === m.id).sort((a, b) => new Date(a.date) - new Date(b.date));
+        if (logs.length > 0) {
+            const diff = m.startWeight - logs[logs.length - 1].weight;
+            if (diff > 0) { totalLoss += diff; lossCount++; }
+        }
+    });
+    const avgLoss = lossCount > 0 ? totalLoss / lossCount : 0;
+    animateCounter(document.getElementById('stat-weightloss'), parseFloat(avgLoss.toFixed(1)));
+
+    animateCounter(document.getElementById('stat-workouts'), workouts.length);
+
+    // Recent check-ins
+    const container = document.getElementById('recent-checkins');
+    const recentWorkouts = [...workouts].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
+    if (recentWorkouts.length === 0) {
+        container.innerHTML = '<p class="text-muted text-sm py-4 text-center">No check-ins yet. Log workouts to see activity.</p>';
+    } else {
+        container.innerHTML = recentWorkouts.map((w, i) => {
+            const member = members.find(m => m.id === w.memberId);
+            const name = member ? member.name : 'Unknown';
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            const exerciseCount = w.exercises ? w.exercises.length : 0;
+            const checkinAvatar = member && member.photo
+                ? `<div class="size-10 rounded-xl overflow-hidden member-photo-ring shrink-0"><img src="${member.photo}" class="photo-preview" alt="${name}"></div>`
+                : `<div class="size-10 rounded-xl bg-gradient-to-br from-primary/30 to-orange-600/20 flex items-center justify-center text-primary text-xs font-bold shrink-0">${initials}</div>`;
+            return `<div class="flex items-center gap-3 p-3 rounded-xl row-hover cursor-pointer stagger-item" onclick="navigate('member-detail','${w.memberId}')" style="animation-delay: ${i * 0.08}s">
+                ${checkinAvatar}
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold truncate">${name}</p>
+                    <p class="text-xs text-muted">${exerciseCount} exercise${exerciseCount !== 1 ? 's' : ''}</p>
+                </div>
+                <span class="text-xs text-muted shrink-0 glass-light px-2 py-1 rounded-lg">${formatDate(w.date)}</span>
+            </div>`;
+        }).join('');
+    }
+
+    // Goal breakdown donut
+    renderGoalChart(members);
+}
+
+function renderGoalChart(members) {
+    const goals = { 'Weight Loss': 0, 'Muscle Gain': 0, 'Endurance': 0, 'General Fitness': 0 };
+    members.forEach(m => { if (goals[m.goal] !== undefined) goals[m.goal]++; });
+
+    if (goalChartInstance) goalChartInstance.destroy();
+
+    const ctx = document.getElementById('goalChart').getContext('2d');
+    const goalColors = ['#3B82F6', '#F97316', '#A855F7', '#22C55E'];
+    const goalLabels = Object.keys(goals);
+    const goalData = Object.values(goals);
+
+    goalChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: goalLabels,
+            datasets: [{
+                data: goalData,
+                backgroundColor: goalColors.map(c => c + '40'),
+                borderColor: goalColors,
+                borderWidth: 2,
+                hoverBorderWidth: 3,
+                hoverOffset: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            cutout: '70%',
+            plugins: {
+                legend: { display: false },
+            },
+            animation: { animateRotate: true, duration: 1200 }
+        }
+    });
+
+    const legend = document.getElementById('goalLegend');
+    legend.innerHTML = goalLabels.map((label, i) => `
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="size-2.5 rounded-full" style="background:${goalColors[i]}"></span>
+                <span class="text-muted">${label}</span>
+            </div>
+            <span class="font-bold">${goalData[i]}</span>
+        </div>
+    `).join('');
+}
+
+// ==================== MEMBERS (COVERFLOW) ====================
+let cfIndex = 0;
+let cfMembers = [];
+let cfStartX = 0;
+let cfSwipeSetup = false;
+
+async function renderMembers() {
+    const data = await loadData();
+    let members = [...data.members];
+    const search = document.getElementById('memberSearch').value.toLowerCase();
+    const goalFilter = document.getElementById('filterGoal').value;
+    const statusFilter = document.getElementById('filterStatus').value;
+
+    if (search) members = members.filter(m => m.name.toLowerCase().includes(search));
+    if (goalFilter) members = members.filter(m => m.goal === goalFilter);
+    if (statusFilter) members = members.filter(m => m.status === statusFilter);
+
+    cfMembers = members;
+    cfIndex = Math.min(cfIndex, Math.max(0, members.length - 1));
+
+    const noMsg = document.getElementById('noMembersMsg');
+    if (members.length === 0) {
+        document.getElementById('coverflowTrack').innerHTML = '';
+        document.getElementById('coverflowDots').innerHTML = '';
+        noMsg.classList.remove('hidden');
+        return;
+    }
+    noMsg.classList.add('hidden');
+
+    buildCoverflowCards(data);
+    buildCoverflowDots();
+    positionCoverflowCards();
+    if (!cfSwipeSetup) { setupCoverflowSwipe(); cfSwipeSetup = true; }
+}
+
+function buildCoverflowCards(data) {
+    const track = document.getElementById('coverflowTrack');
+    const goalEmoji = { 'Weight Loss': '🔥', 'Muscle Gain': '💪', 'Endurance': '🏃', 'General Fitness': '⚡' };
+
+    track.innerHTML = cfMembers.map((m, i) => {
+        const initials = m.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        const workouts = (data.workouts || []).filter(w => w.memberId === m.id).length;
+        const logs = (data.weightLogs || []).filter(l => l.memberId === m.id).sort((a,b) => new Date(a.date)-new Date(b.date));
+        const currentWeight = logs.length > 0 ? logs[logs.length-1].weight : m.startWeight;
+        const totalDiff = Math.abs(m.startWeight - m.targetWeight);
+        const currentDiff = Math.abs(m.startWeight - currentWeight);
+        const progress = totalDiff > 0 ? Math.min((currentDiff/totalDiff)*100, 100) : 0;
+        const statusColor = m.status === 'Active' ? 'bg-cta/15 text-cta border-cta/20' : 'bg-red-500/15 text-red-400 border-red-500/20';
+
+        const avatarContent = m.photo
+            ? `<img src="${m.photo}" class="w-full h-full object-cover rounded-xl" alt="${m.name}">`
+            : `<span class="text-white text-xl font-black">${initials}</span>`;
+
+        return `
+        <div class="cf-card" data-index="${i}" onclick="cfCardClick(${i})">
+            <div class="cf-card-inner">
+                <div class="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl pointer-events-none"></div>
+
+                <div class="flex items-center gap-3 mb-5 relative">
+                    <div class="size-14 rounded-xl bg-gradient-to-br from-primary/40 to-orange-600/30 flex items-center justify-center shrink-0 overflow-hidden shadow-lg shadow-primary/20">
+                        ${avatarContent}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold text-base text-white truncate">${m.name}</h4>
+                        <p class="text-xs text-muted">${m.age} yrs · ${m.gender}</p>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded-full border mt-1 inline-block ${statusColor}">${m.status}</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 mb-4 glass rounded-xl px-3 py-2">
+                    <span class="text-xl">${goalEmoji[m.goal] || '⚡'}</span>
+                    <span class="text-sm font-semibold text-light">${m.goal}</span>
+                </div>
+
+                <div class="mb-4">
+                    <div class="flex justify-between text-xs mb-1.5">
+                        <span class="text-muted">Progress</span>
+                        <span class="text-primary font-bold">${Math.round(progress)}%</span>
+                    </div>
+                    <div class="h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div class="h-full bg-gradient-to-r from-primary to-cta rounded-full transition-all duration-1000" style="width:${progress}%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-muted mt-1">
+                        <span>${m.startWeight} kg</span>
+                        <span>Target: ${m.targetWeight} kg</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    <div class="glass rounded-xl p-2.5 text-center">
+                        <p class="text-lg font-extrabold text-primary">${workouts}</p>
+                        <p class="text-xs text-muted">Workouts</p>
+                    </div>
+                    <div class="glass rounded-xl p-2.5 text-center">
+                        <p class="text-lg font-extrabold text-blue-400">${currentWeight} kg</p>
+                        <p class="text-xs text-muted">Current</p>
+                    </div>
+                </div>
+
+                <button onclick="event.stopPropagation(); navigate('member-detail','${m.id}')"
+                    class="w-full btn-ripple bg-gradient-to-r from-primary/20 to-orange-600/10 hover:from-primary/30 border border-primary/20 hover:border-primary/40 text-primary font-bold py-2.5 rounded-xl text-sm transition-all">
+                    Open Profile →
+                </button>
+            </div>
+
+            <div class="cf-reflection">
+                <div class="cf-card-inner" style="border-color: transparent;">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="size-14 rounded-xl bg-gradient-to-br from-primary/40 to-orange-600/30"></div>
+                        <div><div class="h-3 bg-white/10 rounded w-24 mb-2"></div><div class="h-2 bg-white/5 rounded w-16"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function positionCoverflowCards() {
+    const cards = document.querySelectorAll('.cf-card');
+    const total = cards.length;
+    const isMobile = window.innerWidth < 640;
+    const spacing = isMobile ? 160 : 200;
+
+    cards.forEach((card, i) => {
+        const offset = i - cfIndex;
+        const absOffset = Math.abs(offset);
+
+        const translateX = offset * spacing;
+        const translateZ = absOffset === 0 ? 0 : -120 * absOffset;
+        const rotateY = offset * 45;
+        const scale = absOffset === 0 ? 1 : absOffset === 1 ? 0.82 : 0.65;
+        const opacity = absOffset === 0 ? 1 : absOffset === 1 ? 0.6 : absOffset === 2 ? 0.35 : 0;
+        const zIndex = total - absOffset;
+        const blur = absOffset === 0 ? 0 : absOffset === 1 ? 1 : 3;
+
+        card.style.transform = `translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`;
+        card.style.opacity = opacity;
+        card.style.zIndex = zIndex;
+        card.style.filter = blur > 0 ? `blur(${blur}px)` : 'none';
+        card.style.pointerEvents = absOffset <= 1 ? 'auto' : 'none';
+
+        card.classList.toggle('active', offset === 0);
+        const inner = card.querySelector('.cf-card-inner');
+        if (inner) {
+            inner.style.boxShadow = offset === 0
+                ? '0 0 60px rgba(249,115,22,0.25), 0 25px 50px rgba(0,0,0,0.5)'
+                : '0 10px 30px rgba(0,0,0,0.3)';
+            inner.style.borderColor = offset === 0
+                ? 'rgba(249,115,22,0.25)'
+                : 'rgba(255,255,255,0.06)';
+        }
+    });
+
+    document.querySelectorAll('.cf-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === cfIndex);
+    });
+}
+
+function buildCoverflowDots() {
+    document.getElementById('coverflowDots').innerHTML = cfMembers.map((_, i) =>
+        `<div class="cf-dot ${i === cfIndex ? 'active' : ''}" onclick="cfGoTo(${i})"></div>`
+    ).join('');
+}
+
+function cfCardClick(i) {
+    if (i === cfIndex) return;
+    cfIndex = i;
+    positionCoverflowCards();
+    buildCoverflowDots();
+}
+
+function cfGoTo(i) {
+    cfIndex = i;
+    positionCoverflowCards();
+    buildCoverflowDots();
+}
+
+function coverflowNext() {
+    if (cfIndex < cfMembers.length - 1) {
+        cfIndex++;
+        positionCoverflowCards();
+        buildCoverflowDots();
+    }
+}
+
+function coverflowPrev() {
+    if (cfIndex > 0) {
+        cfIndex--;
+        positionCoverflowCards();
+        buildCoverflowDots();
+    }
+}
+
+function setupCoverflowSwipe() {
+    const wrapper = document.querySelector('.coverflow-wrapper');
+    if (!wrapper) return;
+    wrapper.addEventListener('touchstart', e => { cfStartX = e.touches[0].clientX; }, { passive: true });
+    wrapper.addEventListener('touchend', e => {
+        const diff = cfStartX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 40) {
+            if (diff > 0) coverflowNext();
+            else coverflowPrev();
+        }
+    }, { passive: true });
+    document.addEventListener('keydown', e => {
+        if (document.getElementById('page-members').classList.contains('active')) {
+            if (e.key === 'ArrowLeft') coverflowPrev();
+            if (e.key === 'ArrowRight') coverflowNext();
+        }
+    });
+}
+
+// ==================== MEMBER FORM ====================
+function showMemberForm(memberId) {
+    document.getElementById('editMemberId').value = '';
+    document.getElementById('formTitle').textContent = 'Add New Member';
+    document.getElementById('memberForm').reset();
+    document.getElementById('formPhotoData').value = '';
+    document.getElementById('formAvatarPreview').innerHTML = '<span id="formAvatarInitials">?</span>';
+    document.getElementById('formStartDate').value = new Date().toISOString().split('T')[0];
+    document.querySelectorAll('#goalSelector input[type="radio"]').forEach(r => r.checked = false);
+    navigate('member-form');
+}
+
+async function editMember(id) {
+    const data = await loadData();
+    const m = data.members.find(x => x.id === id);
+    if (!m) return;
+
+    document.getElementById('editMemberId').value = m.id;
+    document.getElementById('formTitle').textContent = 'Edit Member';
+    document.getElementById('formName').value = m.name;
+    document.getElementById('formAge').value = m.age;
+    document.getElementById('formGender').value = m.gender;
+    document.getElementById('formContact').value = m.contact;
+    document.getElementById('formStartWeight').value = m.startWeight;
+    document.getElementById('formTargetWeight').value = m.targetWeight;
+    document.getElementById('formStartDate').value = m.startDate;
+
+    // Load photo
+    document.getElementById('formPhotoData').value = m.photo || '';
+    const preview = document.getElementById('formAvatarPreview');
+    if (m.photo) {
+        preview.innerHTML = `<img src="${m.photo}" class="photo-preview" alt="Avatar">`;
+    } else {
+        const initials = m.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        preview.innerHTML = `<span id="formAvatarInitials">${initials}</span>`;
+    }
+
+    const radio = document.querySelector(`#goalSelector input[value="${m.goal}"]`);
+    if (radio) radio.checked = true;
+
+    document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+    const target = document.getElementById('page-member-form');
+    target.style.display = 'block';
+    void target.offsetWidth;
+    target.classList.add('active');
+}
+
+async function saveMember(e) {
+    e.preventDefault();
+    const data = await loadData();
+    const editId = document.getElementById('editMemberId').value;
+    const goalRadio = document.querySelector('#goalSelector input[type="radio"]:checked');
+    if (!goalRadio) return showToast('Please select a fitness goal', 'error');
+
+    const photoData = document.getElementById('formPhotoData').value;
+    const member = {
+        id: editId || genId(),
+        name: document.getElementById('formName').value.trim(),
+        age: parseInt(document.getElementById('formAge').value),
+        gender: document.getElementById('formGender').value,
+        contact: document.getElementById('formContact').value.trim(),
+        goal: goalRadio.value,
+        startWeight: parseFloat(document.getElementById('formStartWeight').value),
+        targetWeight: parseFloat(document.getElementById('formTargetWeight').value),
+        startDate: document.getElementById('formStartDate').value,
+        status: 'Active',
+        photo: photoData || ''
+    };
+
+    if (editId) {
+        const idx = data.members.findIndex(m => m.id === editId);
+        if (idx !== -1) { member.status = data.members[idx].status; if (!member.photo) member.photo = data.members[idx].photo || ''; data.members[idx] = member; }
+    } else {
+        data.members.push(member);
+    }
+
+    await saveData(data);
+    burstConfetti();
+    showToast(editId ? 'Member updated!' : 'Member added!');
+    navigate('members');
+}
+
+// ==================== MEMBER DETAIL ====================
+async function showMemberDetail(id) {
+    currentMemberId = id;
+    const data = await loadData();
+    const m = data.members.find(x => x.id === id);
+    if (!m) return;
+
+    const initials = m.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    const avatarEl = document.getElementById('detail-avatar');
+    if (m.photo) {
+        avatarEl.innerHTML = `<img src="${m.photo}" class="photo-preview" alt="${m.name}">`;
+    } else {
+        avatarEl.innerHTML = '';
+        avatarEl.textContent = initials;
+    }
+    decryptText(document.getElementById('detail-name'), m.name, 600);
+    document.getElementById('detail-age').textContent = m.age;
+    document.getElementById('detail-gender').textContent = m.gender;
+    document.getElementById('detail-contact').textContent = m.contact;
+    document.getElementById('detail-goal').textContent = m.goal;
+    document.getElementById('detail-startweight').textContent = m.startWeight + ' kg (start)';
+    document.getElementById('detail-targetweight').textContent = m.targetWeight + ' kg (target)';
+    document.getElementById('detail-startdate').textContent = formatDate(m.startDate);
+
+    const statusEl = document.getElementById('detail-status');
+    statusEl.textContent = m.status;
+    statusEl.className = `text-xs font-bold px-3 py-1 rounded-full w-fit border ${m.status === 'Active' ? 'bg-cta/15 text-cta border-cta/20' : 'bg-red-500/15 text-red-400 border-red-500/20'}`;
+
+    // Weight data
+    const weightLogs = (data.weightLogs || []).filter(l => l.memberId === id).sort((a, b) => new Date(a.date) - new Date(b.date));
+    const currentWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight : m.startWeight;
+    const totalDiff = Math.abs(m.startWeight - m.targetWeight);
+    const currentDiff = Math.abs(m.startWeight - currentWeight);
+    const progress = totalDiff > 0 ? Math.min((currentDiff / totalDiff) * 100, 100) : 0;
+
+    // Progress bar
+    document.getElementById('detail-progress-pct').textContent = Math.round(progress) + '%';
+    setTimeout(() => { document.getElementById('detail-progress-bar').style.width = progress + '%'; }, 200);
+
+    // Quick stats
+    const memberWorkouts = (data.workouts || []).filter(w => w.memberId === id);
+    const totalExercises = memberWorkouts.reduce((acc, w) => acc + (w.exercises ? w.exercises.length : 0), 0);
+
+    animateCounter(document.getElementById('detail-total-workouts'), memberWorkouts.length);
+    animateCounter(document.getElementById('detail-total-exercises'), totalExercises);
+    document.getElementById('detail-current-weight').textContent = currentWeight.toFixed(1);
+
+    const change = currentWeight - m.startWeight;
+    const changeEl = document.getElementById('detail-weight-change');
+    changeEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(1);
+    changeEl.className = `text-3xl font-extrabold ${change <= 0 ? 'text-cta' : 'text-red-400'}`;
+
+    // Weight chart
+    const labels = [formatDate(m.startDate), ...weightLogs.map(l => formatDate(l.date))];
+    const weights = [m.startWeight, ...weightLogs.map(l => l.weight)];
+
+    if (weightChartInstance) weightChartInstance.destroy();
+
+    const ctx = document.getElementById('weightChart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+    gradient.addColorStop(0, 'rgba(249, 115, 22, 0.25)');
+    gradient.addColorStop(1, 'rgba(249, 115, 22, 0)');
+
+    weightChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Weight (kg)',
+                data: weights,
+                borderColor: '#F97316',
+                backgroundColor: gradient,
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#F97316',
+                pointBorderColor: '#0B0F19',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 8,
+                pointHoverBackgroundColor: '#FB923C',
+            }, {
+                label: 'Target',
+                data: Array(labels.length).fill(m.targetWeight),
+                borderColor: 'rgba(34, 197, 94, 0.5)',
+                borderWidth: 1.5,
+                borderDash: [6, 4],
+                pointRadius: 0,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: { labels: { color: '#9CA3AF', font: { size: 11, family: 'Inter' }, usePointStyle: true, pointStyle: 'circle' } },
+                tooltip: {
+                    backgroundColor: 'rgba(15,23,42,0.9)',
+                    titleColor: '#F8FAFC',
+                    bodyColor: '#9CA3AF',
+                    borderColor: 'rgba(249,115,22,0.3)',
+                    borderWidth: 1,
+                    cornerRadius: 12,
+                    padding: 12,
+                    displayColors: true,
+                }
+            },
+            scales: {
+                x: { ticks: { color: '#6B7280', font: { size: 10, family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.03)' }, border: { color: 'rgba(255,255,255,0.05)' } },
+                y: { ticks: { color: '#6B7280', font: { size: 10, family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.03)' }, border: { color: 'rgba(255,255,255,0.05)' } }
+            },
+            animation: { duration: 1200, easing: 'easeOutQuart' }
+        }
+    });
+
+    document.getElementById('weightDate').value = new Date().toISOString().split('T')[0];
+
+    // Workout log
+    const workouts = (data.workouts || []).filter(w => w.memberId === id).sort((a, b) => new Date(b.date) - new Date(a.date));
+    const wBody = document.getElementById('detailWorkoutLog');
+    const noWorkouts = document.getElementById('noWorkoutsMsg');
+    document.getElementById('workoutCount').textContent = workouts.length + ' session' + (workouts.length !== 1 ? 's' : '');
+
+    if (workouts.length === 0) {
+        wBody.innerHTML = '';
+        noWorkouts.classList.remove('hidden');
+    } else {
+        noWorkouts.classList.add('hidden');
+        const rows = [];
+        workouts.forEach(w => {
+            const exList = w.exercises || [];
+            // Count total rows for this workout (for photo rowspan)
+            let totalRows = 0;
+            exList.forEach(ex => {
+                const setsData = Array.isArray(ex.sets) ? ex.sets : [{ reps: ex.reps, weight: ex.weight }];
+                totalRows += setsData.length;
+            });
+
+            let isFirstRowOfWorkout = true;
+            exList.forEach(ex => {
+                const setsData = Array.isArray(ex.sets) ? ex.sets : [{ reps: ex.reps, weight: ex.weight }];
+                setsData.forEach((set, setIdx) => {
+                    let photoCell = '';
+                    if (isFirstRowOfWorkout) {
+                        photoCell = w.photo
+                            ? `<td class="px-3 py-2" rowspan="${totalRows}"><img src="${w.photo}" class="session-photo-thumb" onclick="openLightbox(this.src)" alt="Session"></td>`
+                            : `<td class="px-3 py-2 text-muted/30" rowspan="${totalRows}"><svg class="size-6 mx-auto" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" width="24" height="24"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg></td>`;
+                        isFirstRowOfWorkout = false;
+                    }
+                    const dateCell = setIdx === 0 ? `<td class="px-4 py-2 text-muted text-xs" rowspan="${setsData.length}">${formatDate(w.date)}</td>` : '';
+                    const nameCell = setIdx === 0 ? `<td class="px-4 py-2 font-semibold text-sm" rowspan="${setsData.length}">${ex.name}</td>` : '';
+                    rows.push(`<tr class="border-b border-white/5 row-hover">
+                        ${photoCell}${dateCell}${nameCell}
+                        <td class="px-4 py-2 text-xs text-muted text-center">Set ${setIdx + 1}</td>
+                        <td class="px-4 py-2"><span class="glass-light px-2 py-0.5 rounded-md text-xs font-bold">${set.reps}</span></td>
+                        <td class="px-4 py-2 text-primary font-bold text-sm">${set.weight} kg</td>
+                    </tr>`);
+                });
+            });
+        });
+        wBody.innerHTML = rows.join('');
+    }
+
+    document.getElementById('trainerNotes').value = data.notes[id] || '';
+
+    // Strength Progress
+    await buildExerciseChips(id);
+}
+
+async function addWeightEntry() {
+    const weight = parseFloat(document.getElementById('newWeight').value);
+    const date = document.getElementById('weightDate').value;
+    if (!weight || !date) return showToast('Enter weight and date', 'error');
+
+    const data = await loadData();
+    if (!data.weightLogs) data.weightLogs = [];
+    data.weightLogs.push({ memberId: currentMemberId, weight, date });
+    await saveData(data);
+    document.getElementById('newWeight').value = '';
+    await showMemberDetail(currentMemberId);
+    showToast('Weight logged!');
+}
+
+async function saveNotes() {
+    const data = await loadData();
+    data.notes[currentMemberId] = document.getElementById('trainerNotes').value;
+    await saveData(data);
+    showToast('Notes saved!');
+}
+
+async function editCurrentMember() { await editMember(currentMemberId); }
+
+async function deleteCurrentMember() {
+    if (!confirm('Delete this member and all their data?')) return;
+    const data = await loadData();
+    data.members = data.members.filter(m => m.id !== currentMemberId);
+    data.workouts = data.workouts.filter(w => w.memberId !== currentMemberId);
+    data.weightLogs = (data.weightLogs || []).filter(l => l.memberId !== currentMemberId);
+    delete data.notes[currentMemberId];
+    await saveData(data);
+    showToast('Member deleted');
+    navigate('members');
+}
+
+// ==================== WORKOUT LOGGER ====================
+async function initWorkoutPage() {
+    const data = await loadData();
+    const sel = document.getElementById('workoutMember');
+    sel.innerHTML = '<option value="">Choose member...</option>' +
+        data.members.filter(m => m.status === 'Active').map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+    document.getElementById('workoutDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('exerciseList').innerHTML = '';
+    document.getElementById('sessionPhotoData').value = '';
+    document.getElementById('sessionPhotoImg').src = '';
+    document.getElementById('sessionPhotoImg').classList.add('hidden');
+    addExerciseRow();
+    updateExerciseCounter();
+}
+
+function addExerciseRow() {
+    const container = document.getElementById('exerciseList');
+    const exId = 'ex-' + Date.now();
+    const card = document.createElement('div');
+    card.className = 'exercise-card glass-light rounded-xl p-4 mb-3';
+    card.style.animation = 'pageEnter 0.3s ease both';
+    card.dataset.exId = exId;
+    card.innerHTML = `
+        <div class="flex items-center gap-2 mb-3">
+            <input type="text" placeholder="Exercise name (e.g. Bench Press)"
+                class="exercise-name flex-1 bg-dark/50 border border-border rounded-lg px-3 h-10 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none">
+            <button onclick="removeExerciseCard(this)"
+                class="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 rounded-lg transition-all shrink-0" aria-label="Remove exercise">
+                <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16">
+                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+            </button>
+        </div>
+        <div class="sets-container space-y-2 mb-3">
+            <div class="hidden sm:grid grid-cols-[3rem_1fr_1fr_2rem] gap-2 px-1 text-[10px] font-semibold text-muted uppercase tracking-wider">
+                <span></span><span>Reps</span><span>Weight (kg)</span><span></span>
+            </div>
+        </div>
+        <button onclick="addSetRow(this)"
+            class="text-primary hover:text-primary-light text-xs font-bold flex items-center gap-1.5 transition-colors group">
+            <span class="size-5 rounded-md bg-primary/15 flex items-center justify-center group-hover:bg-primary/25 transition-colors">
+                <svg class="size-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24" width="12" height="12"><path d="M12 4v16m8-8H4"/></svg>
+            </span>
+            Add Set
+        </button>
+    `;
+    container.appendChild(card);
+    addSetRow(card.querySelector('button[onclick^="addSetRow"]'));
+    updateExerciseCounter();
+}
+
+function addSetRow(btn) {
+    const setsContainer = btn.closest('.exercise-card').querySelector('.sets-container');
+    const setNum = setsContainer.querySelectorAll('.set-row').length + 1;
+    const row = document.createElement('div');
+    row.className = 'set-row grid grid-cols-[3rem_1fr_1fr_2rem] gap-2 items-center';
+    row.style.animation = 'pageEnter 0.2s ease both';
+    row.innerHTML = `
+        <span class="set-label text-xs font-bold text-muted text-center shrink-0">Set ${setNum}</span>
+        <input type="number" placeholder="Reps" min="1"
+            class="set-reps bg-dark/50 border border-border rounded-lg px-3 h-9 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none text-center">
+        <input type="number" placeholder="kg" step="0.5"
+            class="set-weight bg-dark/50 border border-border rounded-lg px-3 h-9 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none text-center">
+        <button onclick="removeSetRow(this)"
+            class="text-muted hover:text-red-400 p-1 rounded-lg transition-all shrink-0 flex items-center justify-center" title="Remove set">
+            <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14">
+                <path d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+    `;
+    setsContainer.appendChild(row);
+    renumberSets(setsContainer);
+}
+
+function removeSetRow(btn) {
+    const setsContainer = btn.closest('.sets-container');
+    if (setsContainer.querySelectorAll('.set-row').length <= 1) return;
+    btn.closest('.set-row').remove();
+    renumberSets(setsContainer);
+}
+
+function renumberSets(container) {
+    container.querySelectorAll('.set-row').forEach((row, i) => {
+        row.querySelector('.set-label').textContent = 'Set ' + (i + 1);
+    });
+}
+
+function removeExerciseCard(btn) {
+    const card = btn.closest('.exercise-card');
+    card.style.transform = 'scale(0.95)';
+    card.style.opacity = '0';
+    card.style.transition = 'all 0.2s ease';
+    setTimeout(() => { card.remove(); updateExerciseCounter(); }, 200);
+}
+
+function updateExerciseCounter() {
+    const count = document.getElementById('exerciseList').querySelectorAll('.exercise-card').length;
+    document.getElementById('exerciseCounter').textContent = count + ' exercise' + (count !== 1 ? 's' : '');
+}
+
+async function saveWorkout() {
+    const memberId = document.getElementById('workoutMember').value;
+    const date = document.getElementById('workoutDate').value;
+    if (!memberId) return showToast('Select a member', 'error');
+    if (!date) return showToast('Select a date', 'error');
+
+    const cards = document.getElementById('exerciseList').querySelectorAll('.exercise-card');
+    const exercises = [];
+    cards.forEach(card => {
+        const name = card.querySelector('.exercise-name').value.trim();
+        if (!name) return;
+        const sets = [];
+        card.querySelectorAll('.set-row').forEach(row => {
+            const reps = parseInt(row.querySelector('.set-reps').value);
+            const weight = parseFloat(row.querySelector('.set-weight').value) || 0;
+            if (reps) sets.push({ reps, weight });
+        });
+        if (sets.length > 0) exercises.push({ name, sets });
+    });
+
+    if (exercises.length === 0) return showToast('Add at least one exercise', 'error');
+
+    const sessionPhoto = document.getElementById('sessionPhotoData').value;
+    const data = await loadData();
+    const workout = { id: genId(), memberId, date, exercises };
+    if (sessionPhoto) workout.photo = sessionPhoto;
+    data.workouts.push(workout);
+    await saveData(data);
+    burstConfetti();
+    showToast('Workout saved!');
+    await initWorkoutPage();
+}
+
+// ==================== SEED DEMO DATA ====================
+async function seedDemoData() {
+    const data = await loadData();
+    if (data.members && data.members.length > 0) return;
+
+    const members = [
+        { id: 'demo1', name: 'Alex Johnson', age: 28, gender: 'Male', contact: 'alex@email.com', goal: 'Muscle Gain', startWeight: 75, targetWeight: 82, startDate: '2025-12-01', status: 'Active' },
+        { id: 'demo2', name: 'Sarah Chen', age: 32, gender: 'Female', contact: 'sarah@email.com', goal: 'Weight Loss', startWeight: 78, targetWeight: 65, startDate: '2025-11-15', status: 'Active' },
+        { id: 'demo3', name: 'Marcus Davis', age: 24, gender: 'Male', contact: 'marcus@email.com', goal: 'Endurance', startWeight: 82, targetWeight: 78, startDate: '2026-01-10', status: 'Active' },
+        { id: 'demo4', name: 'Emma Wilson', age: 29, gender: 'Female', contact: 'emma@email.com', goal: 'General Fitness', startWeight: 64, targetWeight: 60, startDate: '2026-02-01', status: 'Active' },
+        { id: 'demo5', name: 'Ryan Park', age: 35, gender: 'Male', contact: 'ryan@email.com', goal: 'Weight Loss', startWeight: 95, targetWeight: 80, startDate: '2025-10-20', status: 'Inactive' },
+    ];
+
+    const weightLogs = [
+        { memberId: 'demo1', weight: 76.2, date: '2026-01-01' }, { memberId: 'demo1', weight: 77.5, date: '2026-02-01' },
+        { memberId: 'demo1', weight: 78.8, date: '2026-03-01' }, { memberId: 'demo1', weight: 79.5, date: '2026-03-25' },
+        { memberId: 'demo2', weight: 76.5, date: '2025-12-15' }, { memberId: 'demo2', weight: 74.8, date: '2026-01-15' },
+        { memberId: 'demo2', weight: 72.3, date: '2026-02-15' }, { memberId: 'demo2', weight: 70.1, date: '2026-03-15' },
+        { memberId: 'demo3', weight: 81.5, date: '2026-02-10' }, { memberId: 'demo3', weight: 80.8, date: '2026-03-10' },
+        { memberId: 'demo4', weight: 63.2, date: '2026-03-01' },
+        { memberId: 'demo5', weight: 93, date: '2025-11-20' }, { memberId: 'demo5', weight: 90, date: '2025-12-20' },
+    ];
+
+    const workouts = [
+        { id: 'w1', memberId: 'demo1', date: '2026-03-27', exercises: [
+            { name: 'Bench Press', sets: [{reps:10,weight:80},{reps:10,weight:80},{reps:8,weight:82.5},{reps:6,weight:85}] },
+            { name: 'Incline Dumbbell Press', sets: [{reps:12,weight:30},{reps:12,weight:30},{reps:10,weight:32}] },
+            { name: 'Cable Flyes', sets: [{reps:15,weight:15},{reps:15,weight:15},{reps:12,weight:17.5}] },
+        ]},
+        { id: 'w2', memberId: 'demo2', date: '2026-03-28', exercises: [
+            { name: 'Treadmill Run', sets: [{reps:1,weight:0}] },
+            { name: 'Leg Press', sets: [{reps:12,weight:100},{reps:12,weight:100},{reps:10,weight:110},{reps:8,weight:120}] },
+            { name: 'Walking Lunges', sets: [{reps:20,weight:10},{reps:20,weight:10},{reps:16,weight:12}] },
+        ]},
+        { id: 'w3', memberId: 'demo3', date: '2026-03-28', exercises: [
+            { name: 'Rowing Machine', sets: [{reps:1,weight:0}] },
+            { name: 'Burpees', sets: [{reps:15,weight:0},{reps:15,weight:0},{reps:12,weight:0},{reps:12,weight:0},{reps:10,weight:0}] },
+            { name: 'Box Jumps', sets: [{reps:12,weight:0},{reps:12,weight:0},{reps:10,weight:0},{reps:10,weight:0}] },
+        ]},
+        { id: 'w4', memberId: 'demo1', date: '2026-03-25', exercises: [
+            { name: 'Squats', sets: [{reps:5,weight:120},{reps:5,weight:120},{reps:5,weight:125},{reps:4,weight:130},{reps:3,weight:135}] },
+            { name: 'Romanian Deadlift', sets: [{reps:8,weight:90},{reps:8,weight:90},{reps:8,weight:95},{reps:6,weight:100}] },
+            { name: 'Leg Curl', sets: [{reps:12,weight:40},{reps:12,weight:40},{reps:10,weight:45}] },
+        ]},
+        { id: 'w5', memberId: 'demo4', date: '2026-03-26', exercises: [
+            { name: 'Kettlebell Swings', sets: [{reps:15,weight:16},{reps:15,weight:16},{reps:15,weight:16},{reps:12,weight:20}] },
+            { name: 'Plank Hold', sets: [{reps:1,weight:0},{reps:1,weight:0},{reps:1,weight:0}] },
+            { name: 'Mountain Climbers', sets: [{reps:20,weight:0},{reps:20,weight:0},{reps:20,weight:0}] },
+        ]},
+    ];
+
+    const notes = {
+        'demo1': 'Progressing well on strength. Increase bench to 85kg next week. Diet compliance is good — hitting protein targets.',
+        'demo2': 'Excellent consistency. Down 8kg in 4 months. Introduce more HIIT next phase. Consider meal prep guidance.',
+        'demo3': 'Great cardiovascular improvements. Heart rate recovery has improved significantly. Push for 5K under 22 minutes.',
+    };
+
+    await saveData({ members, workouts, weightLogs, notes });
+}
+
+// ==================== INIT ====================
+(async () => {
+    await seedDemoData();
+    initBlurText();
+    initRotatingText();
+    await refreshDashboard();
+    document.getElementById('loadingOverlay').style.display = 'none';
+})();
+
+// ==================== SERVICE WORKER ====================
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js');
+    });
+}
+</script>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="fixed inset-0 z-[9999] bg-dark flex items-center justify-center">
+    <div class="text-center">
+        <div class="size-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+        <p class="text-muted text-sm">Daten werden geladen...</p>
+    </div>
+</div>
+</body>
+</html>
