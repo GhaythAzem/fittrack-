@@ -692,6 +692,12 @@
                 <input type="file" accept=".json" class="hidden" onchange="importData(event)">
             </label>
         </div>
+        <div class="mb-2">
+            <button onclick="restoreFromBackup()" class="w-full btn-ripple glass-light hover:bg-white/10 text-muted hover:text-light px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5">
+                <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Daten wiederherstellen
+            </button>
+        </div>
         <div class="flex gap-2 mb-3">
             <button onclick="requestNotificationPermission()" class="flex-1 btn-ripple glass-light hover:bg-white/10 text-muted hover:text-light px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5">
                 <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
@@ -1622,6 +1628,20 @@ function importData(event) {
     event.target.value = '';
 }
 
+async function restoreFromBackup() {
+    const backup = localStorage.getItem('fittrack_backup');
+    if (!backup) return showToast('Kein Backup vorhanden', 'error');
+    if (!confirm('Letztes lokales Backup wiederherstellen? Aktuelle Daten werden überschrieben.')) return;
+    try {
+        const data = JSON.parse(backup);
+        await saveData(data);
+        await refreshDashboard();
+        showToast('Backup wiederhergestellt!');
+    } catch {
+        showToast('Backup fehlerhaft', 'error');
+    }
+}
+
 // ==================== STRENGTH PROGRESS CHART ====================
 let strengthChartInstance = null;
 
@@ -1782,6 +1802,8 @@ async function loadData() {
         const snap = await DOC_REF.get();
         if (snap.exists) return snap.data();
     } catch (e) { console.error('loadData error:', e); }
+    const backup = localStorage.getItem('fittrack_backup');
+    if (backup) return JSON.parse(backup);
     return { members: [], workouts: [], weightLogs: [], notes: {} };
 }
 
@@ -1789,6 +1811,7 @@ async function saveData(data) {
     try {
         await DOC_REF.set(data);
     } catch (e) { console.error('saveData error:', e); }
+    localStorage.setItem('fittrack_backup', JSON.stringify(data));
 }
 
 function genId() {
@@ -2826,7 +2849,10 @@ async function saveWorkout() {
 // ==================== SEED DEMO DATA ====================
 async function seedDemoData() {
     const data = await loadData();
-    if (data.members && data.members.length > 0) return;
+    if ((data.members && data.members.length > 0) ||
+        (data.workouts && data.workouts.length > 0) ||
+        (data.weightLogs && data.weightLogs.length > 0) ||
+        (data.notes && Object.keys(data.notes).length > 0)) return;
 
     const members = [
         { id: 'demo1', name: 'Alex Johnson', age: 28, gender: 'Male', contact: 'alex@email.com', goal: 'Muscle Gain', startWeight: 75, targetWeight: 82, startDate: '2025-12-01', status: 'Active' },
@@ -2905,6 +2931,7 @@ async function seedDemoData() {
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js');
+        navigator.serviceWorker.register('./firebase-messaging-sw.js');
     });
 }
 </script>
