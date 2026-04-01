@@ -1082,7 +1082,7 @@
 </aside>
 
 <!-- Mobile Header -->
-<header id="mobileHeader" class="lg:hidden fixed top-0 left-0 right-0 z-50 glass px-4 py-3 flex items-center justify-between">
+<header id="mobileHeader" class="lg:hidden fixed top-0 left-0 right-0 z-50 glass px-4 flex items-center justify-between" style="padding-top: calc(0.75rem + env(safe-area-inset-top)); padding-bottom: 0.75rem">
     <div class="flex items-center gap-3">
         <button onclick="toggleSidebar()" class="text-muted hover:text-light transition-colors" aria-label="Toggle menu">
             <svg class="size-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -1092,7 +1092,7 @@
 </header>
 
 <!-- Main Content -->
-<main id="mainContent" class="lg:ml-64 pt-14 lg:pt-0 min-h-screen relative z-10">
+<main id="mainContent" class="lg:ml-64 lg:pt-0 min-h-screen relative z-10" style="padding-top: calc(3.5rem + env(safe-area-inset-top))">
 
     <!-- ==================== LOGIN SCREEN ==================== -->
     <div id="page-login" class="page active">
@@ -2599,9 +2599,20 @@ async function refreshDashboard() {
 
     animateCounter(document.getElementById('stat-workouts'), workouts.length);
 
-    // Recent check-ins
+    // Recent check-ins (grouped by member + date)
     const container = document.getElementById('recent-checkins');
-    const recentWorkouts = [...workouts].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
+    const grouped = {};
+    workouts.forEach(w => {
+        const key = w.memberId + '_' + w.date;
+        if (!grouped[key]) {
+            grouped[key] = { memberId: w.memberId, date: w.date, totalExercises: (w.exercises || []).length, sessionCount: 1 };
+        } else {
+            grouped[key].totalExercises += (w.exercises || []).length;
+            grouped[key].sessionCount += 1;
+        }
+    });
+    const recentWorkouts = Object.values(grouped).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+
     if (recentWorkouts.length === 0) {
         container.innerHTML = '<p class="text-muted text-sm py-4 text-center">No check-ins yet. Log workouts to see activity.</p>';
     } else {
@@ -2609,7 +2620,9 @@ async function refreshDashboard() {
             const member = members.find(m => m.id === w.memberId);
             const name = member ? member.name : 'Unknown';
             const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-            const exerciseCount = w.exercises ? w.exercises.length : 0;
+            const subtitle = w.sessionCount > 1
+                ? `${w.sessionCount} sessions · ${w.totalExercises} exercises`
+                : `${w.totalExercises} exercise${w.totalExercises !== 1 ? 's' : ''}`;
             const checkinAvatar = member && member.photo
                 ? `<div class="size-10 rounded-xl overflow-hidden member-photo-ring shrink-0"><img src="${member.photo}" class="photo-preview" alt="${name}"></div>`
                 : `<div class="size-10 rounded-xl bg-gradient-to-br from-primary/30 to-orange-600/20 flex items-center justify-center text-primary text-xs font-bold shrink-0">${initials}</div>`;
@@ -2617,7 +2630,7 @@ async function refreshDashboard() {
                 ${checkinAvatar}
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold truncate">${name}</p>
-                    <p class="text-xs text-muted">${exerciseCount} exercise${exerciseCount !== 1 ? 's' : ''}</p>
+                    <p class="text-xs text-muted">${subtitle}</p>
                 </div>
                 <span class="text-xs text-muted shrink-0 glass-light px-2 py-1 rounded-lg">${formatDate(w.date)}</span>
             </div>`;
@@ -3668,7 +3681,8 @@ function enterApp(role, memberId) {
     if (role === 'trainer') {
         document.getElementById('sidebar').style.display = '';
         document.getElementById('mobileHeader').style.display = '';
-        document.getElementById('mainContent').className = 'lg:ml-64 pt-14 lg:pt-0 min-h-screen relative z-10';
+        document.getElementById('mainContent').className = 'lg:ml-64 lg:pt-0 min-h-screen relative z-10';
+        document.getElementById('mainContent').style.paddingTop = 'calc(3.5rem + env(safe-area-inset-top))';
         const nav = document.getElementById('memberBottomNav');
         if (nav) nav.style.display = 'none';
         document.getElementById('member-workout-btn').classList.add('hidden');
