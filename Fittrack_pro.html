@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>FitTrack Pro — Gym Trainer Dashboard</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#F97316">
@@ -1033,8 +1033,14 @@
             </span>
             Workout Logger
         </button>
+        <button onclick="logout()" data-page="logout" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200">
+            <span class="nav-icon-wrap">
+                <svg class="size-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            </span>
+            Abmelden
+        </button>
     </nav>
-    <div class="p-4 border-t border-border mt-auto shrink-0">
+    <div class="p-4 border-t border-border mt-auto shrink-0" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom))">
         <div class="flex gap-2 mb-2">
             <button onclick="exportData()" class="flex-1 btn-ripple glass-light hover:bg-white/10 text-muted hover:text-light px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5">
                 <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
@@ -1072,10 +1078,6 @@
                 </p>
             </div>
         </div>
-        <button onclick="logout()" class="w-full btn-ripple glass-light hover:bg-red-500/10 hover:text-red-400 text-muted text-xs px-2 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 mt-2">
-            <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-            Abmelden
-        </button>
     </div>
 </aside>
 
