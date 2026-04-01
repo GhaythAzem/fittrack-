@@ -4,7 +4,18 @@
       "Bash(grep -v '//')",
       "Bash(python -c \"from PIL import Image; print\\(''Pillow OK''\\)\")",
       "Bash(pip install:*)",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "mcp__magic__21st_magic_component_inspiration",
+      "mcp__magic__21st_magic_component_builder",
+      "Bash(export CLAUDE_CODE_USE_POWERSHELL_TOOL=1)",
+      "mcp__magic__21st_magic_component_refiner",
+      "Bash(python3 .claude/skills/ui-ux-pro-max/scripts/search.py \"fitness dashboard dark glassmorphism mobile\" --design-system -p \"FitTrack Pro\")",
+      "Bash(python .claude/skills/ui-ux-pro-max/scripts/search.py \"fitness dashboard dark glassmorphism mobile\" --design-system -p \"FitTrack Pro\")",
+      "Bash(python3 .claude/skills/ui-ux-pro-max/scripts/search.py \"animation accessibility touch-target\" --domain ux)",
+      "Bash(python .claude/skills/ui-ux-pro-max/scripts/search.py \"animation accessibility touch-target\" --domain ux)",
+      "Bash(python3 .claude/skills/ui-ux-pro-max/scripts/search.py \"layout responsive form card\" --stack html-tailwind)",
+      "Bash(python .claude/skills/ui-ux-pro-max/scripts/search.py \"layout responsive form card\" --stack html-tailwind)",
+      "Bash(python .claude/skills/ui-ux-pro-max/scripts/search.py \"glow shadow border card dark\" --domain style -n 3)"
     ]
   }
 }

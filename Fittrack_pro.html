@@ -53,63 +53,10 @@
         ::-webkit-scrollbar-thumb { background: rgba(249,115,22,0.3); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(249,115,22,0.5); }
 
-        /* Glassmorphism base */
-        .glass {
-            background: rgba(15, 23, 42, 0.55);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .glass-light {
-            background: rgba(30, 41, 59, 0.5);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        /* 3D Tilt Card */
-        .tilt-card {
-            transform-style: preserve-3d;
-            perspective: 1000px;
-            transition: transform 0.15s ease-out, box-shadow 0.3s ease;
-        }
-        .tilt-card:hover {
-            box-shadow: 0 25px 50px -12px rgba(249, 115, 22, 0.15), 0 0 30px rgba(249,115,22,0.05);
-        }
-        .tilt-card .tilt-inner {
-            transform: translateZ(30px);
-            transition: transform 0.15s ease-out;
-        }
-
-        /* Glow effects */
-        .glow-orange { box-shadow: 0 0 30px rgba(249,115,22,0.15), inset 0 0 30px rgba(249,115,22,0.03); }
-        .glow-green { box-shadow: 0 0 30px rgba(34,197,94,0.15), inset 0 0 30px rgba(34,197,94,0.03); }
-        .glow-blue { box-shadow: 0 0 30px rgba(59,130,246,0.15), inset 0 0 30px rgba(59,130,246,0.03); }
-        .glow-purple { box-shadow: 0 0 30px rgba(168,85,247,0.15), inset 0 0 30px rgba(168,85,247,0.03); }
-
-        /* Animated gradient border */
+        /* ===== PROBLEM 1 FIX: Subtle borders, no harsh glow ===== */
+        /* gradient-border: NO ::before pseudo — just subtle border */
         .gradient-border {
-            position: relative;
-            overflow: hidden;
-        }
-        .gradient-border::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            padding: 1px;
-            background: linear-gradient(135deg, rgba(249,115,22,0.4), rgba(34,197,94,0.2), rgba(59,130,246,0.3), rgba(168,85,247,0.2));
-            background-size: 300% 300%;
-            animation: borderShift 6s ease infinite;
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask-composite: exclude;
-            -webkit-mask-composite: xor;
-            pointer-events: none;
-        }
-        @keyframes borderShift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+            border: 1px solid rgba(255,255,255,0.04);
         }
 
         /* Floating orbs */
@@ -137,23 +84,7 @@
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        /* Nav */
-        .nav-item { border-left: 3px solid transparent; position: relative; overflow: hidden; }
-        .nav-item::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(90deg, rgba(249,115,22,0.15), transparent);
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .nav-item:hover::before { opacity: 1; }
-        .nav-item.active {
-            background: rgba(249, 115, 22, 0.1);
-            color: #F97316;
-            border-left: 3px solid #F97316;
-        }
-        .nav-item.active::before { opacity: 1; }
+        /* Nav — defined in 3D UPGRADE section below */
 
         /* Pulse ring on stat icons */
         .pulse-ring {
@@ -239,12 +170,7 @@
             100% { background-position: -200% 0; }
         }
 
-        /* Sidebar glass */
-        #sidebar {
-            background: rgba(6, 10, 19, 0.85);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-        }
+        /* Sidebar glass — see enhanced version below */
 
         /* 3D Logo */
         .logo-3d {
@@ -551,8 +477,7 @@
             background: #F97316;
         }
 
-        /* Exercise Card */
-        .exercise-card { transition: all 0.2s ease; }
+        /* Exercise Card — see enhanced 3D version below */
 
         /* Exercise Chips */
         .exercise-chip { cursor: pointer; transition: all 0.2s ease;
@@ -590,38 +515,116 @@
             justify-content: center; padding: 0 4px;
         }
 
-        /* Touch-freundlichere Buttons auf Mobile */
+        /* ===== PROBLEM 3 FIX: RESPONSIVE — 320px minimum ===== */
+
+        /* prefers-reduced-motion (design system rule) */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Mobile: max-width 640px */
         @media (max-width: 640px) {
+            /* Sidebar full-screen overlay */
             #sidebar { width: 100% !important; }
             .nav-item { padding: 14px 16px !important; min-height: 52px; }
-            button { min-height: 44px; }
-            .cf-card { width: 240px !important; }
-            .exercise-card { padding: 12px !important; }
-            .set-row { flex-wrap: wrap; gap: 8px; }
+
+            /* Apple HIG: 44px touch targets */
+            button, .counter-3d-btn, .btn-ripple, select { min-height: 44px; }
+
+            /* Coverflow cards */
+            .cf-card { width: 260px !important; }
+
+            /* Exercise card — clear structure on small screens */
+            .exercise-card { padding: 16px !important; }
+
+            /* Set row — flex wrap on very small screens */
+            .set-row {
+                display: grid !important;
+                grid-template-columns: 48px 1fr 1fr 32px !important;
+                gap: 6px !important;
+                align-items: center !important;
+            }
+            .set-row .counter-3d-btn {
+                min-width: 32px;
+                min-height: 40px;
+                font-size: 16px;
+            }
+            .set-row .set-reps,
+            .set-row .set-weight {
+                min-height: 40px;
+            }
+
+            /* Overflow scrolling for tables */
             .overflow-x-auto {
                 -webkit-overflow-scrolling: touch;
                 scrollbar-width: none;
             }
+
+            /* Chart heights */
             .h-56 { height: 180px !important; }
             .h-64 { height: 200px !important; }
+
+            /* Exercise list single column */
             #exerciseList .grid {
                 grid-template-columns: 1fr !important;
             }
+
+            /* Camera modal */
             #cameraModal > div {
                 margin: 16px !important;
                 width: calc(100% - 32px) !important;
             }
+
+            /* Toast position */
             #toast {
                 bottom: 80px !important;
-                left: 16px !important;
-                right: 16px !important;
+                left: 12px !important;
+                right: 12px !important;
                 width: auto !important;
             }
+
+            /* Padding adjustments */
             .p-4 { padding: 12px !important; }
-            .p-6 { padding: 16px !important; }
+            .p-6 { padding: 14px !important; }
             .p-8 { padding: 16px !important; }
+
+            /* Disable 3D tilt on mobile (performance) */
             .tilt-card { transform: none !important; }
             .tilt-card:hover { transform: none !important; }
+            .tilt-card::after { display: none; }
+
+            /* Prevent text overflow */
+            h2, h3, h4, p, span { overflow-wrap: break-word; word-break: break-word; }
+
+            /* Stats grid — ensure 2 columns */
+            .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+            /* Progress ring smaller on mobile */
+            .progress-ring-container { width: 60px !important; height: 60px !important; }
+            .progress-ring-container svg { width: 60px !important; height: 60px !important; }
+            .progress-ring-label { font-size: 11px !important; }
+        }
+
+        /* Extra small screens: 320px */
+        @media (max-width: 374px) {
+            .cf-card { width: 220px !important; }
+            .set-row {
+                grid-template-columns: 40px 1fr 1fr 28px !important;
+                gap: 4px !important;
+            }
+            .counter-3d-btn {
+                min-width: 28px !important;
+                font-size: 14px !important;
+            }
+            .text-3xl { font-size: 1.5rem !important; }
+            .text-4xl { font-size: 1.75rem !important; }
+            .gap-4 { gap: 8px !important; }
+            .gap-5 { gap: 10px !important; }
+            .mb-8 { margin-bottom: 1.5rem !important; }
         }
 
         /* Smooth Scroll überall */
@@ -630,6 +633,361 @@
 
         /* Verhindert Text-Zoom auf iOS beim Focus */
         input, select, textarea { font-size: 16px !important; }
+
+        /* ===== STATS CARDS — subtle 3D, soft shadows ===== */
+        .tilt-card {
+            transform-style: preserve-3d;
+            perspective: 800px;
+            transition: transform 0.25s ease-out, box-shadow 0.3s ease-out;
+            will-change: transform;
+            position: relative;
+            overflow: hidden;
+        }
+        .tilt-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -60%;
+            width: 40%;
+            height: 200%;
+            background: linear-gradient(
+                105deg,
+                transparent 42%,
+                rgba(255,255,255,0.06) 48%,
+                rgba(255,255,255,0.08) 50%,
+                rgba(255,255,255,0.06) 52%,
+                transparent 58%
+            );
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-out;
+            z-index: 2;
+        }
+        .tilt-card:hover::after {
+            opacity: 1;
+            animation: holoSweep 1.8s ease-in-out;
+        }
+        @keyframes holoSweep {
+            0% { left: -60%; }
+            100% { left: 160%; }
+        }
+        .tilt-card:hover {
+            box-shadow:
+                0 20px 50px -10px rgba(0, 0, 0, 0.5),
+                0 0 40px rgba(249,115,22,0.06);
+        }
+        .tilt-card .tilt-inner {
+            transform: translateZ(30px);
+            transition: transform 0.25s ease-out;
+            position: relative;
+            z-index: 3;
+        }
+
+        /* Subtle pulse ring — reduced intensity */
+        .pulse-ring::after {
+            animation: pulseRing 3s ease-out infinite;
+        }
+        .pulse-ring::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: inherit;
+            background: currentColor;
+            opacity: 0;
+            filter: blur(6px);
+            animation: pulseGlow 3s ease-out infinite;
+        }
+        @keyframes pulseGlow {
+            0% { opacity: 0.3; transform: scale(0.9); }
+            100% { opacity: 0; transform: scale(1.5); }
+        }
+
+        /* Stat number — minimal text-shadow */
+        .stat-number {
+            text-shadow: 0 0 10px rgba(248,250,252,0.08);
+            transition: all 0.3s ease-out;
+        }
+
+        /* ===== MEMBER CARDS — subtle holographic, soft ring ===== */
+        .cf-card-inner {
+            position: relative;
+            overflow: hidden;
+        }
+        .cf-card.active .cf-card-inner::before {
+            content: '';
+            position: absolute;
+            top: -100%;
+            left: -100%;
+            width: 300%;
+            height: 300%;
+            background: conic-gradient(
+                from 0deg,
+                transparent 0%,
+                rgba(249,115,22,0.04) 10%,
+                rgba(34,197,94,0.03) 20%,
+                rgba(59,130,246,0.04) 30%,
+                transparent 40%
+            );
+            animation: holoRotate 12s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        @keyframes holoRotate {
+            to { transform: rotate(360deg); }
+        }
+
+        /* SVG Progress Ring — subtle drop-shadow */
+        .progress-ring-circle {
+            transition: stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            filter: drop-shadow(0 0 4px var(--ring-color, rgba(249,115,22,0.3)));
+        }
+        .progress-ring-bg {
+            opacity: 0.1;
+        }
+        .progress-ring-container {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .progress-ring-label {
+            position: absolute;
+            font-size: 13px;
+            font-weight: 800;
+            color: #F97316;
+        }
+
+        /* Reflection — very subtle */
+        .cf-reflection {
+            bottom: -100px;
+            height: 90px;
+            opacity: 0.08;
+            filter: blur(4px);
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,0.4), transparent 70%);
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.4), transparent 70%);
+        }
+
+        /* ===== SIDEBAR NAVIGATION — subtle active, smooth transitions ===== */
+        .nav-item {
+            border-left: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease-out;
+        }
+        .nav-item .nav-icon-wrap {
+            display: inline-flex;
+            transition: transform 0.3s ease-out;
+            transform-style: preserve-3d;
+        }
+        .nav-item:hover .nav-icon-wrap {
+            transform: rotateY(180deg);
+        }
+        .nav-item.active .nav-icon-wrap {
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 4px rgba(249,115,22,0.4));
+        }
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(249,115,22,0.06), transparent);
+            opacity: 0;
+            transition: opacity 0.2s ease-out;
+        }
+        .nav-item:hover::before { opacity: 1; }
+        .nav-item.active {
+            background: rgba(249, 115, 22, 0.06);
+            color: #F97316;
+            border-left: 3px solid #F97316;
+        }
+        .nav-item.active::before {
+            opacity: 1;
+            background: linear-gradient(90deg, rgba(249,115,22,0.08), transparent);
+        }
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: #F97316;
+            box-shadow: 0 0 8px rgba(249,115,22,0.5);
+        }
+
+        /* ===== PROBLEM 2 FIX: WORKOUT LOGGER — clean box structure ===== */
+        .floating-input {
+            transition: box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+        }
+        .floating-input:focus {
+            box-shadow: 0 0 0 2px rgba(249,115,22,0.12);
+            border-color: rgba(249,115,22,0.3) !important;
+        }
+        .counter-3d-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            min-height: 44px;
+            border-radius: 10px;
+            background: rgba(249,115,22,0.1);
+            color: #F97316;
+            font-weight: 700;
+            font-size: 18px;
+            cursor: pointer;
+            border: 1px solid rgba(249,115,22,0.15);
+            transition: all 0.15s ease-out;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            flex-shrink: 0;
+        }
+        .counter-3d-btn:hover {
+            background: rgba(249,115,22,0.18);
+        }
+        .counter-3d-btn:active {
+            transform: scale(0.9);
+            background: rgba(249,115,22,0.25);
+        }
+
+        /* Exercise card — clear box */
+        .exercise-card {
+            background: rgba(15, 23, 42, 0.6) !important;
+            border: 1px solid rgba(255,255,255,0.06) !important;
+            border-radius: 16px !important;
+            padding: 20px !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transition: border-color 0.2s ease-out;
+            margin-bottom: 12px;
+        }
+        .exercise-card:hover {
+            border-color: rgba(255,255,255,0.1) !important;
+        }
+
+        /* Set row — proper alignment */
+        .set-row {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            padding: 6px 0;
+        }
+        .set-row .set-label {
+            width: 48px;
+            min-width: 48px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .set-row > div {
+            flex: 1;
+            min-width: 0;
+        }
+        .set-row .set-reps,
+        .set-row .set-weight {
+            min-width: 0;
+            width: 100%;
+            min-height: 40px;
+        }
+        .set-row > button:last-child {
+            flex-shrink: 0;
+            min-width: 32px;
+            min-height: 44px;
+        }
+
+        /* Sets container header alignment */
+        .sets-container > div:first-child {
+            padding: 0 0 4px 0 !important;
+            margin-bottom: 4px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+
+        /* Exercise suggestions dropdown */
+        .exercise-suggestions {
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            background: rgba(15,23,42,0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .exercise-suggestions button:hover {
+            background: rgba(249,115,22,0.08);
+        }
+
+        /* ===== CHARTS — subtle underglow ===== */
+        .chart-3d-container {
+            position: relative;
+        }
+        .chart-3d-container::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 15%;
+            right: 15%;
+            height: 40%;
+            background: radial-gradient(ellipse at center bottom, rgba(249,115,22,0.04) 0%, transparent 70%);
+            pointer-events: none;
+            border-radius: 0 0 16px 16px;
+            z-index: 0;
+        }
+        .chart-3d-container canvas {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* GPU acceleration for smooth 60fps */
+        .tilt-card, .cf-card, .nav-item, .exercise-card, .counter-3d-btn, .floating-input, .magnetic-btn {
+            will-change: transform;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+        .progress-ring-circle, .orb {
+            will-change: transform, opacity;
+        }
+
+        /* Glass — subtle borders per design system */
+        .glass {
+            background: rgba(11, 15, 25, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        .glass-light {
+            background: rgba(20, 30, 48, 0.5);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+
+        /* Sidebar glass */
+        #sidebar {
+            background: rgba(6, 10, 19, 0.92);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-right: 1px solid rgba(255,255,255,0.04);
+        }
+
+        /* Glow effects — SUBTLE: deep dark shadows, max 8% color glow */
+        .glow-orange {
+            box-shadow: 0 0 40px rgba(249,115,22,0.06),
+                        0 0 80px rgba(249,115,22,0.03),
+                        0 20px 40px rgba(0,0,0,0.4);
+        }
+        .glow-green {
+            box-shadow: 0 0 40px rgba(34,197,94,0.06),
+                        0 0 80px rgba(34,197,94,0.03),
+                        0 20px 40px rgba(0,0,0,0.4);
+        }
+        .glow-blue {
+            box-shadow: 0 0 40px rgba(59,130,246,0.06),
+                        0 0 80px rgba(59,130,246,0.03),
+                        0 20px 40px rgba(0,0,0,0.4);
+        }
+        .glow-purple {
+            box-shadow: 0 0 40px rgba(168,85,247,0.06),
+                        0 0 80px rgba(168,85,247,0.03),
+                        0 20px 40px rgba(0,0,0,0.4);
+        }
     </style>
 </head>
 <body class="bg-dark text-light min-h-screen font-sans">
@@ -641,16 +999,6 @@
 <div class="orb" style="width:400px;height:400px;background:#F97316;top:10%;left:-5%;animation-delay:0s;"></div>
 <div class="orb" style="width:350px;height:350px;background:#22C55E;top:60%;right:-8%;animation-delay:-3s;"></div>
 <div class="orb" style="width:300px;height:300px;background:#3B82F6;bottom:-5%;left:30%;animation-delay:-5s;"></div>
-
-<!-- Mobile Header -->
-<header class="lg:hidden fixed top-0 left-0 right-0 z-50 glass px-4 py-3 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-        <button onclick="toggleSidebar()" class="text-muted hover:text-light transition-colors" aria-label="Toggle menu">
-            <svg class="size-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
-        </button>
-        <span class="text-lg font-bold text-primary">FitTrack</span>
-    </div>
-</header>
 
 <!-- Sidebar Overlay -->
 <div id="sidebarOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden lg:hidden transition-opacity" onclick="toggleSidebar()"></div>
@@ -668,15 +1016,21 @@
     </div>
     <nav class="p-3 space-y-1 mt-2 flex-1">
         <button onclick="navigate('dashboard')" data-page="dashboard" class="nav-item active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted hover:text-light transition-all duration-200">
-            <svg class="size-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/></svg>
+            <span class="nav-icon-wrap">
+                <svg class="size-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/></svg>
+            </span>
             Dashboard
         </button>
         <button onclick="navigate('members')" data-page="members" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted hover:text-light transition-all duration-200">
-            <svg class="size-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span class="nav-icon-wrap">
+                <svg class="size-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </span>
             Members
         </button>
         <button onclick="navigate('workout')" data-page="workout" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted hover:text-light transition-all duration-200">
-            <svg class="size-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span class="nav-icon-wrap">
+                <svg class="size-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </span>
             Workout Logger
         </button>
     </nav>
@@ -718,14 +1072,88 @@
                 </p>
             </div>
         </div>
+        <button onclick="logout()" class="w-full btn-ripple glass-light hover:bg-red-500/10 hover:text-red-400 text-muted text-xs px-2 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 mt-2">
+            <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Abmelden
+        </button>
     </div>
 </aside>
 
+<!-- Mobile Header -->
+<header id="mobileHeader" class="lg:hidden fixed top-0 left-0 right-0 z-50 glass px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="text-muted hover:text-light transition-colors" aria-label="Toggle menu">
+            <svg class="size-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="24" height="24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <span class="text-lg font-bold text-primary">FitTrack</span>
+    </div>
+</header>
+
 <!-- Main Content -->
-<main class="lg:ml-64 pt-14 lg:pt-0 min-h-screen relative z-10">
+<main id="mainContent" class="lg:ml-64 pt-14 lg:pt-0 min-h-screen relative z-10">
+
+    <!-- ==================== LOGIN SCREEN ==================== -->
+    <div id="page-login" class="page active">
+        <div class="min-h-screen flex items-center justify-center p-6">
+            <div class="w-full max-w-sm">
+
+                <!-- Logo -->
+                <div class="text-center mb-10">
+                    <div class="size-20 bg-gradient-to-br from-primary to-orange-600 rounded-2xl flex items-center justify-center text-white text-3xl font-black mx-auto mb-4 shadow-xl shadow-primary/25">FT</div>
+                    <h1 class="text-3xl font-extrabold">FitTrack <span class="gradient-text">Pro</span></h1>
+                    <p class="text-muted text-sm mt-2">Wer bist du?</p>
+                </div>
+
+                <!-- Role Selection -->
+                <div id="roleSelection" class="space-y-4">
+                    <button onclick="selectRole('trainer')" class="w-full glass gradient-border rounded-2xl p-6 text-left hover:bg-white/5 transition-all cursor-pointer">
+                        <div class="flex items-center gap-4">
+                            <div class="size-14 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                                <svg class="size-7 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="28" height="28"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                            </div>
+                            <div>
+                                <p class="font-bold text-lg">Trainer</p>
+                                <p class="text-muted text-sm">Voller Zugriff auf alle Daten</p>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectRole('member')" class="w-full glass gradient-border rounded-2xl p-6 text-left hover:bg-white/5 transition-all cursor-pointer">
+                        <div class="flex items-center gap-4">
+                            <div class="size-14 rounded-xl bg-cta/20 flex items-center justify-center shrink-0">
+                                <svg class="size-7 text-cta" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="28" height="28"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                            </div>
+                            <div>
+                                <p class="font-bold text-lg">Member</p>
+                                <p class="text-muted text-sm">Mein persönliches Dashboard</p>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Member Name Input (hidden initially) -->
+                <div id="memberLogin" class="hidden mt-6">
+                    <button onclick="backToRoleSelection()" class="text-muted hover:text-primary text-sm flex items-center gap-1 mb-4 transition-colors">
+                        <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" d="M15 19l-7-7 7-7"/></svg>
+                        Zurück
+                    </button>
+                    <div class="glass gradient-border rounded-2xl p-6">
+                        <p class="font-bold mb-4">Deinen Namen eingeben:</p>
+                        <input type="text" id="memberNameInput" placeholder="z.B. Ghayth..." oninput="searchMemberName(this.value)" class="w-full glass-light border border-border rounded-xl px-4 h-12 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none mb-3" autocomplete="off">
+
+                        <!-- Suggestions -->
+                        <div id="memberSuggestions" class="space-y-2"></div>
+
+                        <p id="memberNotFound" class="text-red-400 text-sm text-center py-3 hidden">Kein Member mit diesem Namen gefunden.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
 
     <!-- ==================== DASHBOARD ==================== -->
-    <div id="page-dashboard" class="page active">
+    <div id="page-dashboard" class="page">
         <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
             <div class="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
@@ -815,7 +1243,7 @@
                 <!-- Goal Breakdown Donut -->
                 <div class="glass gradient-border rounded-2xl p-6">
                     <h3 class="text-lg font-bold mb-5">Goals Breakdown</h3>
-                    <div class="h-48 flex items-center justify-center">
+                    <div class="h-48 flex items-center justify-center chart-3d-container">
                         <canvas id="goalChart"></canvas>
                     </div>
                     <div id="goalLegend" class="mt-4 space-y-2 text-sm"></div>
@@ -887,9 +1315,21 @@
     <!-- ==================== MEMBER DETAIL ==================== -->
     <div id="page-member-detail" class="page">
         <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-            <button onclick="navigate('members')" class="text-muted hover:text-primary text-sm flex items-center gap-1 mb-6 transition-colors group">
-                <svg class="size-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" d="M15 19l-7-7 7-7"/></svg>
-                Back to Members
+            <!-- Back button (trainer) or logout button (member) -->
+            <div id="detail-nav-bar" class="flex items-center justify-between mb-4">
+                <button id="detail-back-btn" onclick="navigate('members')" class="text-muted hover:text-primary text-sm flex items-center gap-1 transition-colors group">
+                    <svg class="size-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" d="M15 19l-7-7 7-7"/></svg>
+                    Back to Members
+                </button>
+                <button id="detail-logout-btn" onclick="logout()" class="hidden text-muted hover:text-primary text-sm flex items-center gap-1 transition-colors">
+                    <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    Rolle wechseln
+                </button>
+            </div>
+            <!-- Member workout button (only visible for member role) -->
+            <button id="member-workout-btn" onclick="openMemberWorkoutLogger()" class="hidden btn-ripple bg-gradient-to-r from-primary to-orange-600 hover:shadow-lg hover:shadow-primary/25 text-white px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 mb-6 cursor-pointer">
+                <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path d="M12 4v16m8-8H4"/></svg>
+                Workout loggen
             </button>
 
             <!-- Profile Header -->
@@ -935,7 +1375,7 @@
                 <!-- Weight Progress Chart -->
                 <div class="glass gradient-border rounded-2xl p-6">
                     <h3 class="text-lg font-bold mb-4">Weight Trend</h3>
-                    <div class="h-56">
+                    <div class="h-56 chart-3d-container">
                         <canvas id="weightChart"></canvas>
                     </div>
                     <div class="mt-5 flex flex-col sm:flex-row gap-3">
@@ -1008,7 +1448,7 @@
             <div class="glass gradient-border rounded-2xl p-6 mb-6">
                 <h3 class="text-lg font-bold mb-4">Strength Progress</h3>
                 <div id="exerciseChips" class="flex flex-wrap gap-2 mb-4"></div>
-                <div class="h-56">
+                <div class="h-56 chart-3d-container">
                     <canvas id="strengthChart"></canvas>
                 </div>
                 <p id="noStrengthMsg" class="text-muted text-sm text-center py-4 hidden">No exercise data to chart.</p>
@@ -1708,8 +2148,13 @@ async function renderStrengthChart(memberId, exerciseName) {
 
     const ctx = document.getElementById('strengthChart').getContext('2d');
     const gradientOrange = ctx.createLinearGradient(0, 0, 0, 220);
-    gradientOrange.addColorStop(0, 'rgba(249, 115, 22, 0.2)');
+    gradientOrange.addColorStop(0, 'rgba(249, 115, 22, 0.3)');
+    gradientOrange.addColorStop(0.5, 'rgba(249, 115, 22, 0.1)');
     gradientOrange.addColorStop(1, 'rgba(249, 115, 22, 0)');
+
+    const gradientGreen = ctx.createLinearGradient(0, 0, 0, 220);
+    gradientGreen.addColorStop(0, 'rgba(34, 197, 94, 0.15)');
+    gradientGreen.addColorStop(1, 'rgba(34, 197, 94, 0)');
 
     strengthChartInstance = new Chart(ctx, {
         type: 'line',
@@ -1720,27 +2165,32 @@ async function renderStrengthChart(memberId, exerciseName) {
                 data: points.map(p => p.weight),
                 borderColor: '#F97316',
                 backgroundColor: gradientOrange,
-                borderWidth: 2.5,
+                borderWidth: 3,
                 fill: true,
                 tension: 0.4,
                 pointBackgroundColor: '#F97316',
                 pointBorderColor: '#0B0F19',
-                pointBorderWidth: 2,
-                pointRadius: 5,
-                pointHoverRadius: 8,
+                pointBorderWidth: 3,
+                pointRadius: 6,
+                pointHoverRadius: 10,
+                pointHoverBorderColor: '#F97316',
+                pointHoverBorderWidth: 3,
                 yAxisID: 'y',
             }, {
                 label: 'Total Reps',
                 data: points.map(p => p.volume),
                 borderColor: '#22C55E',
-                borderWidth: 2,
+                backgroundColor: gradientGreen,
+                borderWidth: 2.5,
                 tension: 0.4,
                 pointBackgroundColor: '#22C55E',
                 pointBorderColor: '#0B0F19',
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 7,
-                fill: false,
+                pointBorderWidth: 3,
+                pointRadius: 5,
+                pointHoverRadius: 9,
+                pointHoverBorderColor: '#22C55E',
+                pointHoverBorderWidth: 3,
+                fill: true,
                 yAxisID: 'y1',
             }]
         },
@@ -1960,36 +2410,54 @@ function timeAgo(iso) {
     return days + 'd ago';
 }
 
-// ==================== 3D TILT EFFECT ====================
+// ==================== 3D TILT EFFECT (ENHANCED) ====================
 function handleTilt(e, el) {
     const rect = el.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    const rotateX = ((y - centerY) / centerY) * -8;
-    const rotateY = ((x - centerX) / centerX) * 8;
-    el.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02,1.02,1.02)`;
+    const rotateX = ((y - centerY) / centerY) * -12;
+    const rotateY = ((x - centerX) / centerX) * 12;
+    el.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.04,1.04,1.04) translateZ(10px)`;
+    // Dynamic light position
+    const lightX = (x / rect.width) * 100;
+    const lightY = (y / rect.height) * 100;
+    el.style.background = `radial-gradient(circle at ${lightX}% ${lightY}%, rgba(249,115,22,0.06), transparent 60%), rgba(15, 23, 42, 0.55)`;
 }
 
 function resetTilt(el) {
-    el.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
+    el.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1) translateZ(0)';
+    el.style.background = '';
 }
 
-// ==================== ANIMATED COUNTER ====================
+// ==================== ANIMATED COUNTER (ENHANCED 3D) ====================
 function animateCounter(el, target, suffix = '') {
     const start = parseFloat(el.textContent) || 0;
-    const duration = 800;
+    const duration = 1200;
     const startTime = performance.now();
     const isFloat = String(target).includes('.') || suffix.includes('kg');
+
+    // Add glow during animation
+    el.style.textShadow = '0 0 30px rgba(249,115,22,0.4)';
+    el.style.transform = 'scale(1.05)';
 
     function update(currentTime) {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
+        // Elastic easing for more satisfying feel
+        const eased = progress < 0.5
+            ? 4 * progress * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
         const current = start + (target - start) * eased;
         el.textContent = isFloat ? current.toFixed(1) + suffix : Math.round(current) + suffix;
-        if (progress < 1) requestAnimationFrame(update);
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        } else {
+            // Settle animation
+            el.style.textShadow = '0 0 20px rgba(248,250,252,0.15)';
+            el.style.transform = 'scale(1)';
+        }
     }
     requestAnimationFrame(update);
 }
@@ -2037,6 +2505,18 @@ function navigate(page, memberId) {
                 `<span class="blur-text-word" style="animation-delay:${i * 0.1}s">${word}</span>`
             ).join(' ');
         });
+    }
+
+    // Reset detail nav buttons based on role
+    if (page === 'member-detail') {
+        const role = localStorage.getItem('fittrack_role');
+        if (role === 'trainer') {
+            document.getElementById('detail-back-btn').classList.remove('hidden');
+            document.getElementById('detail-logout-btn').classList.add('hidden');
+        } else {
+            document.getElementById('detail-back-btn').classList.add('hidden');
+            document.getElementById('detail-logout-btn').classList.remove('hidden');
+        }
     }
 
     if (page === 'dashboard') refreshDashboard();
@@ -2267,17 +2747,33 @@ function buildCoverflowCards(data) {
                     <span class="text-sm font-semibold text-light">${m.goal}</span>
                 </div>
 
-                <div class="mb-4">
-                    <div class="flex justify-between text-xs mb-1.5">
-                        <span class="text-muted">Progress</span>
-                        <span class="text-primary font-bold">${Math.round(progress)}%</span>
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="progress-ring-container" style="width:72px;height:72px;">
+                        <svg width="72" height="72" viewBox="0 0 72 72">
+                            <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(249,115,22,0.12)" stroke-width="5" class="progress-ring-bg"/>
+                            <circle cx="36" cy="36" r="30" fill="none" stroke="url(#progGrad-${i})" stroke-width="5" stroke-linecap="round"
+                                class="progress-ring-circle"
+                                style="--ring-color:rgba(249,115,22,0.5); stroke-dasharray:${2*Math.PI*30}; stroke-dashoffset:${2*Math.PI*30 - (progress/100)*2*Math.PI*30};"
+                            />
+                            <defs><linearGradient id="progGrad-${i}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#F97316"/><stop offset="100%" stop-color="#22C55E"/>
+                            </linearGradient></defs>
+                        </svg>
+                        <span class="progress-ring-label">${Math.round(progress)}%</span>
                     </div>
-                    <div class="h-2 bg-white/5 rounded-full overflow-hidden">
-                        <div class="h-full bg-gradient-to-r from-primary to-cta rounded-full transition-all duration-1000" style="width:${progress}%"></div>
-                    </div>
-                    <div class="flex justify-between text-xs text-muted mt-1">
-                        <span>${m.startWeight} kg</span>
-                        <span>Target: ${m.targetWeight} kg</span>
+                    <div class="flex-1 space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-muted">Start</span>
+                            <span class="font-bold text-light">${m.startWeight} kg</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-muted">Current</span>
+                            <span class="font-bold text-blue-400">${currentWeight} kg</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-muted">Target</span>
+                            <span class="font-bold text-cta">${m.targetWeight} kg</span>
+                        </div>
                     </div>
                 </div>
 
@@ -2338,11 +2834,11 @@ function positionCoverflowCards() {
         const inner = card.querySelector('.cf-card-inner');
         if (inner) {
             inner.style.boxShadow = offset === 0
-                ? '0 0 60px rgba(249,115,22,0.25), 0 25px 50px rgba(0,0,0,0.5)'
+                ? '0 0 40px rgba(249,115,22,0.08), 0 25px 50px rgba(0,0,0,0.5)'
                 : '0 10px 30px rgba(0,0,0,0.3)';
             inner.style.borderColor = offset === 0
-                ? 'rgba(249,115,22,0.25)'
-                : 'rgba(255,255,255,0.06)';
+                ? 'rgba(255,255,255,0.08)'
+                : 'rgba(255,255,255,0.04)';
         }
     });
 
@@ -2548,7 +3044,8 @@ async function showMemberDetail(id) {
 
     const ctx = document.getElementById('weightChart').getContext('2d');
     const gradient = ctx.createLinearGradient(0, 0, 0, 220);
-    gradient.addColorStop(0, 'rgba(249, 115, 22, 0.25)');
+    gradient.addColorStop(0, 'rgba(249, 115, 22, 0.3)');
+    gradient.addColorStop(0.5, 'rgba(249, 115, 22, 0.1)');
     gradient.addColorStop(1, 'rgba(249, 115, 22, 0)');
 
     weightChartInstance = new Chart(ctx, {
@@ -2560,15 +3057,17 @@ async function showMemberDetail(id) {
                 data: weights,
                 borderColor: '#F97316',
                 backgroundColor: gradient,
-                borderWidth: 2.5,
+                borderWidth: 3,
                 fill: true,
                 tension: 0.4,
                 pointBackgroundColor: '#F97316',
                 pointBorderColor: '#0B0F19',
-                pointBorderWidth: 2,
-                pointRadius: 5,
-                pointHoverRadius: 8,
+                pointBorderWidth: 3,
+                pointRadius: 6,
+                pointHoverRadius: 10,
                 pointHoverBackgroundColor: '#FB923C',
+                pointHoverBorderWidth: 3,
+                pointHoverBorderColor: '#F97316',
             }, {
                 label: 'Target',
                 data: Array(labels.length).fill(m.targetWeight),
@@ -2724,6 +3223,116 @@ async function initWorkoutPage() {
     document.getElementById('sessionPhotoImg').classList.add('hidden');
     addExerciseRow();
     updateExerciseCounter();
+
+    // FIX 3: If member is logged in, auto-select and lock
+    const role = localStorage.getItem('fittrack_role');
+    const autoMemberId = localStorage.getItem('fittrack_member_id');
+    if (role === 'member' && autoMemberId) {
+        setTimeout(() => {
+            const sel = document.getElementById('workoutMember');
+            if (sel) {
+                sel.value = autoMemberId;
+                sel.disabled = true;
+                sel.style.opacity = '0.6';
+                sel.style.cursor = 'not-allowed';
+            }
+        }, 50);
+    } else {
+        // Ensure select is enabled for trainer
+        const sel = document.getElementById('workoutMember');
+        if (sel) {
+            sel.disabled = false;
+            sel.style.opacity = '';
+            sel.style.cursor = '';
+        }
+    }
+}
+
+// ==================== EXERCISE SUGGESTIONS ====================
+async function getExerciseHistory(memberId) {
+    const data = await loadData();
+    const workouts = (data.workouts || []).filter(w => w.memberId === memberId);
+    const exerciseCount = {};
+    workouts.forEach(w => {
+        (w.exercises || []).forEach(ex => {
+            const name = ex.name.trim();
+            if (name) exerciseCount[name] = (exerciseCount[name] || 0) + 1;
+        });
+    });
+    return Object.entries(exerciseCount)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => ({ name, count }));
+}
+
+async function showExerciseSuggestions(input) {
+    const role = localStorage.getItem('fittrack_role');
+    let memberId;
+
+    if (role === 'member') {
+        memberId = localStorage.getItem('fittrack_member_id');
+    } else {
+        memberId = document.getElementById('workoutMember')?.value;
+    }
+
+    if (!memberId) return;
+
+    const history = await getExerciseHistory(memberId);
+    if (history.length === 0) return;
+
+    const query = input.value.toLowerCase();
+    const filtered = query
+        ? history.filter(e => e.name.toLowerCase().includes(query))
+        : history.slice(0, 8);
+
+    renderExerciseSuggestions(input, filtered);
+}
+
+async function filterExerciseSuggestions(input) {
+    await showExerciseSuggestions(input);
+}
+
+function renderExerciseSuggestions(input, exercises) {
+    const dropdown = input.parentElement.querySelector('.exercise-suggestions');
+    if (!dropdown) return;
+
+    if (exercises.length === 0) {
+        dropdown.classList.add('hidden');
+        return;
+    }
+
+    dropdown.innerHTML = exercises.map(ex => `
+        <button type="button"
+            onmousedown="selectExerciseSuggestion(event, '${ex.name.replace(/'/g, "\\'")}')"
+            class="w-full px-4 py-2.5 text-left text-sm hover:bg-white/5 transition-colors flex items-center justify-between gap-2 border-b border-white/5 last:border-0 cursor-pointer">
+            <span class="font-medium text-light">${ex.name}</span>
+            <span class="text-xs text-muted shrink-0">${ex.count}x</span>
+        </button>
+    `).join('');
+
+    dropdown.classList.remove('hidden');
+}
+
+function selectExerciseSuggestion(event, name) {
+    event.preventDefault();
+    const btn = event.currentTarget;
+    const dropdown = btn.closest('.exercise-suggestions');
+    const input = dropdown.parentElement.querySelector('.exercise-name');
+    input.value = name;
+    dropdown.classList.add('hidden');
+
+    // Focus next field (reps)
+    const card = input.closest('.exercise-card');
+    if (card) {
+        const repsInput = card.querySelector('.set-reps');
+        if (repsInput) repsInput.focus();
+    }
+}
+
+function hideExerciseSuggestions(input) {
+    setTimeout(() => {
+        const dropdown = input.parentElement.querySelector('.exercise-suggestions');
+        if (dropdown) dropdown.classList.add('hidden');
+    }, 150);
 }
 
 function addExerciseRow() {
@@ -2735,8 +3344,15 @@ function addExerciseRow() {
     card.dataset.exId = exId;
     card.innerHTML = `
         <div class="flex items-center gap-2 mb-3">
-            <input type="text" placeholder="Exercise name (e.g. Bench Press)"
-                class="exercise-name flex-1 bg-dark/50 border border-border rounded-lg px-3 h-10 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none">
+            <div class="flex-1 relative">
+                <input type="text" placeholder="Exercise name (e.g. Bench Press)"
+                    class="exercise-name floating-input w-full bg-dark/50 border border-border rounded-lg px-3 h-10 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none"
+                    oninput="filterExerciseSuggestions(this)"
+                    onfocus="showExerciseSuggestions(this)"
+                    onblur="hideExerciseSuggestions(this)"
+                    autocomplete="off">
+                <div class="exercise-suggestions absolute top-full left-0 right-0 mt-1 border border-border rounded-xl overflow-hidden z-50 hidden max-h-48 overflow-y-auto"></div>
+            </div>
             <button onclick="removeExerciseCard(this)"
                 class="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 rounded-lg transition-all shrink-0" aria-label="Remove exercise">
                 <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16">
@@ -2770,10 +3386,18 @@ function addSetRow(btn) {
     row.style.animation = 'pageEnter 0.2s ease both';
     row.innerHTML = `
         <span class="set-label text-xs font-bold text-muted text-center shrink-0">Set ${setNum}</span>
-        <input type="number" placeholder="Reps" min="1"
-            class="set-reps bg-dark/50 border border-border rounded-lg px-3 h-9 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none text-center">
-        <input type="number" placeholder="kg" step="0.5"
-            class="set-weight bg-dark/50 border border-border rounded-lg px-3 h-9 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none text-center">
+        <div class="flex items-center gap-1">
+            <button type="button" onclick="counterStep(this, 'reps', -1)" class="counter-3d-btn text-sm">−</button>
+            <input type="number" placeholder="Reps" min="1"
+                class="set-reps floating-input bg-dark/50 border border-border rounded-lg px-2 h-9 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none text-center flex-1 min-w-0">
+            <button type="button" onclick="counterStep(this, 'reps', 1)" class="counter-3d-btn text-sm">+</button>
+        </div>
+        <div class="flex items-center gap-1">
+            <button type="button" onclick="counterStep(this, 'weight', -2.5)" class="counter-3d-btn text-sm">−</button>
+            <input type="number" placeholder="kg" step="0.5"
+                class="set-weight floating-input bg-dark/50 border border-border rounded-lg px-2 h-9 text-sm text-light placeholder:text-muted focus:ring-2 focus:ring-primary/50 outline-none text-center flex-1 min-w-0">
+            <button type="button" onclick="counterStep(this, 'weight', 2.5)" class="counter-3d-btn text-sm">+</button>
+        </div>
         <button onclick="removeSetRow(this)"
             class="text-muted hover:text-red-400 p-1 rounded-lg transition-all shrink-0 flex items-center justify-center" title="Remove set">
             <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14">
@@ -2783,6 +3407,18 @@ function addSetRow(btn) {
     `;
     setsContainer.appendChild(row);
     renumberSets(setsContainer);
+}
+
+function counterStep(btn, type, step) {
+    const row = btn.closest('.set-row');
+    const input = row.querySelector(type === 'reps' ? '.set-reps' : '.set-weight');
+    let val = parseFloat(input.value) || 0;
+    val = Math.max(0, val + step);
+    input.value = type === 'weight' ? val.toFixed(1).replace(/\.0$/, '') : Math.round(val);
+    // Bounce animation
+    input.style.transform = 'scale(1.12)';
+    input.style.transition = 'transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    setTimeout(() => { input.style.transform = 'scale(1)'; }, 150);
 }
 
 function removeSetRow(btn) {
@@ -2839,11 +3475,21 @@ async function saveWorkout() {
     if (sessionPhoto) workout.photo = sessionPhoto;
     data.workouts.push(workout);
     await saveData(data);
-    burstConfetti();
-    showToast('Workout saved!');
     const memberName = data.members.find(m => m.id === memberId)?.name || 'Someone';
     await sendPushNotification('New Workout!', memberName + ' logged a workout');
-    await initWorkoutPage();
+
+    // FIX 4: Route based on role
+    const savedRole = localStorage.getItem('fittrack_role');
+    const savedMemberId = localStorage.getItem('fittrack_member_id');
+    if (savedRole === 'member' && savedMemberId) {
+        burstConfetti();
+        showToast('Workout gespeichert!');
+        showMemberView(savedMemberId);
+    } else {
+        burstConfetti();
+        showToast('Workout saved!');
+        await initWorkoutPage();
+    }
 }
 
 // ==================== SEED DEMO DATA ====================
@@ -2928,6 +3574,236 @@ async function seedDemoData() {
     }
 }
 
+// ==================== LOGIN / ROLE SYSTEM ====================
+
+function showLoginScreen() {
+    document.querySelectorAll('.page').forEach(p => {
+        p.classList.remove('active');
+        p.style.display = 'none';
+    });
+    const login = document.getElementById('page-login');
+    login.style.display = 'block';
+    void login.offsetWidth;
+    login.classList.add('active');
+    document.getElementById('sidebar').style.display = 'none';
+    document.getElementById('mobileHeader').style.display = 'none';
+    document.getElementById('mainContent').className = 'min-h-screen relative z-10';
+}
+
+function selectRole(role) {
+    if (role === 'trainer') {
+        localStorage.setItem('fittrack_role', 'trainer');
+        enterApp('trainer');
+    } else {
+        document.getElementById('roleSelection').classList.add('hidden');
+        document.getElementById('memberLogin').classList.remove('hidden');
+        setTimeout(() => {
+            document.getElementById('memberNameInput').focus();
+        }, 100);
+    }
+}
+
+function backToRoleSelection() {
+    document.getElementById('roleSelection').classList.remove('hidden');
+    document.getElementById('memberLogin').classList.add('hidden');
+    document.getElementById('memberNameInput').value = '';
+    document.getElementById('memberSuggestions').innerHTML = '';
+    document.getElementById('memberNotFound').classList.add('hidden');
+}
+
+async function searchMemberName(query) {
+    const suggestions = document.getElementById('memberSuggestions');
+    const notFound = document.getElementById('memberNotFound');
+
+    if (query.length < 1) {
+        suggestions.innerHTML = '';
+        notFound.classList.add('hidden');
+        return;
+    }
+
+    const data = await loadData();
+    const matches = data.members.filter(m =>
+        m.name.toLowerCase().includes(query.toLowerCase())
+    );
+
+    if (matches.length === 0) {
+        suggestions.innerHTML = '';
+        notFound.classList.remove('hidden');
+        return;
+    }
+
+    notFound.classList.add('hidden');
+    suggestions.innerHTML = matches.map(m => {
+        const initials = m.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        const avatarContent = m.photo
+            ? `<img src="${m.photo}" class="w-full h-full object-cover rounded-xl" alt="${m.name}">`
+            : `<span class="text-primary font-bold text-sm">${initials}</span>`;
+        return `
+        <button onclick="loginAsMember('${m.id}')"
+            class="w-full glass-light hover:bg-white/10 rounded-xl px-4 py-3 text-left transition-all flex items-center gap-3 cursor-pointer">
+            <div class="size-10 rounded-xl bg-gradient-to-br from-primary/30 to-orange-600/20 flex items-center justify-center shrink-0 overflow-hidden">
+                ${avatarContent}
+            </div>
+            <div>
+                <p class="font-semibold">${m.name}</p>
+                <p class="text-xs text-muted">${m.goal} · ${m.status}</p>
+            </div>
+        </button>`;
+    }).join('');
+}
+
+function loginAsMember(memberId) {
+    localStorage.setItem('fittrack_role', 'member');
+    localStorage.setItem('fittrack_member_id', memberId);
+    enterApp('member', memberId);
+}
+
+function enterApp(role, memberId) {
+    const loginPage = document.getElementById('page-login');
+    loginPage.classList.remove('active');
+    loginPage.style.display = 'none';
+
+    if (role === 'trainer') {
+        document.getElementById('sidebar').style.display = '';
+        document.getElementById('mobileHeader').style.display = '';
+        document.getElementById('mainContent').className = 'lg:ml-64 pt-14 lg:pt-0 min-h-screen relative z-10';
+        const nav = document.getElementById('memberBottomNav');
+        if (nav) nav.style.display = 'none';
+        document.getElementById('member-workout-btn').classList.add('hidden');
+        navigate('dashboard');
+    } else {
+        document.getElementById('sidebar').style.display = 'none';
+        document.getElementById('mobileHeader').style.display = 'none';
+        document.getElementById('mainContent').className = 'min-h-screen relative z-10 pb-20';
+        showMemberView(memberId);
+    }
+}
+
+function showMemberView(memberId) {
+    currentMemberId = memberId;
+    document.querySelectorAll('.page').forEach(p => {
+        p.classList.remove('active');
+        p.style.display = 'none';
+    });
+
+    // Show member-detail page
+    const target = document.getElementById('page-member-detail');
+    if (target) {
+        target.style.display = 'block';
+        void target.offsetWidth;
+        target.classList.add('active');
+    }
+
+    // Show logout button + workout button, hide back button
+    document.getElementById('detail-back-btn').classList.add('hidden');
+    document.getElementById('detail-logout-btn').classList.remove('hidden');
+    document.getElementById('member-workout-btn').classList.remove('hidden');
+
+    // Member bottom navigation
+    let memberNav = document.getElementById('memberBottomNav');
+    if (!memberNav) {
+        memberNav = document.createElement('div');
+        memberNav.id = 'memberBottomNav';
+        memberNav.className = 'fixed bottom-0 left-0 right-0 z-50 glass border-t border-border px-4 py-3 flex items-center justify-around';
+        memberNav.innerHTML = `
+            <button onclick="showMemberView('${memberId}')" class="flex flex-col items-center gap-1 text-primary min-h-[44px] justify-center">
+                <svg class="size-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                <span class="text-xs font-semibold">Profil</span>
+            </button>
+            <button onclick="openMemberWorkoutLogger()" class="flex flex-col items-center gap-1 text-muted hover:text-primary transition-colors min-h-[44px] justify-center">
+                <svg class="size-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span class="text-xs font-semibold">Workout</span>
+            </button>
+            <button onclick="logout()" class="flex flex-col items-center gap-1 text-muted hover:text-red-400 transition-colors min-h-[44px] justify-center">
+                <svg class="size-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="20" height="20"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                <span class="text-xs font-semibold">Wechseln</span>
+            </button>
+        `;
+        document.body.appendChild(memberNav);
+    } else {
+        // Update onclick with current memberId and show
+        memberNav.querySelector('button:first-child').setAttribute('onclick', `showMemberView('${memberId}')`);
+        memberNav.style.display = 'flex';
+    }
+
+    showMemberDetail(memberId);
+}
+
+function openMemberWorkoutLogger() {
+    const memberId = localStorage.getItem('fittrack_member_id');
+    if (!memberId) return;
+
+    // Navigate to workout page
+    document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+    const target = document.getElementById('page-workout');
+    if (target) { target.style.display = 'block'; void target.offsetWidth; target.classList.add('active'); }
+
+    initWorkoutPage();
+
+    // Auto-select member after page loads
+    setTimeout(() => {
+        const sel = document.getElementById('workoutMember');
+        if (sel) {
+            sel.value = memberId;
+            sel.disabled = true;
+            sel.style.opacity = '0.6';
+            sel.style.cursor = 'not-allowed';
+        }
+    }, 100);
+
+    // Update bottom nav active state
+    const nav = document.getElementById('memberBottomNav');
+    if (nav) {
+        nav.querySelectorAll('button').forEach((btn, i) => {
+            btn.querySelector('svg').parentElement.classList.toggle('text-primary', i === 1);
+            btn.querySelector('svg').parentElement.classList.toggle('text-muted', i !== 1);
+        });
+    }
+}
+
+function logout() {
+    localStorage.removeItem('fittrack_role');
+    localStorage.removeItem('fittrack_member_id');
+    // Reset member detail nav
+    document.getElementById('detail-back-btn').classList.remove('hidden');
+    document.getElementById('detail-logout-btn').classList.add('hidden');
+    document.getElementById('member-workout-btn').classList.add('hidden');
+    // Hide member bottom nav
+    const nav = document.getElementById('memberBottomNav');
+    if (nav) nav.style.display = 'none';
+    // Reset role selection UI
+    document.getElementById('roleSelection').classList.remove('hidden');
+    document.getElementById('memberLogin').classList.add('hidden');
+    document.getElementById('memberNameInput').value = '';
+    document.getElementById('memberSuggestions').innerHTML = '';
+    showLoginScreen();
+}
+
+async function checkLoginState() {
+    const role = localStorage.getItem('fittrack_role');
+    const memberId = localStorage.getItem('fittrack_member_id');
+
+    if (role === 'trainer') {
+        enterApp('trainer');
+        return;
+    }
+
+    if (role === 'member' && memberId) {
+        // Verify member still exists
+        const data = await loadData();
+        const exists = data.members.some(m => m.id === memberId);
+        if (exists) {
+            enterApp('member', memberId);
+            return;
+        }
+        // Member deleted — clear and show login
+        localStorage.removeItem('fittrack_role');
+        localStorage.removeItem('fittrack_member_id');
+    }
+
+    showLoginScreen();
+}
+
 // ==================== INIT ====================
 (async () => {
     try {
@@ -2936,18 +3812,19 @@ async function seedDemoData() {
         updateNotifBadge();
         initBlurText();
         initRotatingText();
-        await refreshDashboard();
+        await checkLoginState();
     } catch(err) {
         console.error('Init Fehler:', err);
         initBlurText();
         initRotatingText();
+        showLoginScreen();
     } finally {
         document.getElementById('loadingOverlay').style.display = 'none';
     }
 
-    // Auto-request notifications after 3s
+    // Auto-request notifications after 3s (only for trainer)
     setTimeout(() => {
-        if ('Notification' in window && Notification.permission === 'default') {
+        if (localStorage.getItem('fittrack_role') === 'trainer' && 'Notification' in window && Notification.permission === 'default') {
             requestNotificationPermission();
         }
     }, 3000);
